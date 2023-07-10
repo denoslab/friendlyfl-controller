@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project List</title>
+</head>
+<body>
+<h1>Project List</h1>
+{% if project_list %}
+    <ul>
+    {% for project in project_list %}
+        <li><a href="/controller/{{ project.id }}/">{{ project.name }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No projects are available yet.</p>
+{% endif %}
+</body>
+</html>
