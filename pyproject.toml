@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "friendlyfl-controller"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [{include = "friendlyfl_controller"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = "^4.2.3"
+python-dotenv = "^1.0.0"
+requests = "^2.31.0"
+
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.4.1"
+autopep8 = "^2.0.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

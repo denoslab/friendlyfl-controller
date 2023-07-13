@@ -19,7 +19,8 @@ def index(request):
     q2.question_text = "Text2"
 
     latest_question_list = [q1, q2]
-    template = loader.get_template("controller/index.html")
+    template = loader.get_template(
+        "controller/templates/controller/index.html")
     context = {
         "latest_question_list": latest_question_list,
     }
@@ -27,7 +28,7 @@ def index(request):
 
 
 def list_projects(request):
-    response = requests.get('http://http://localhost:8000/projects/')
+    response = request.get('http://http://localhost:8000/projects/')
     # convert reponse data into json
     users = response.json()
     print(users)
