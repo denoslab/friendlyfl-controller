@@ -120,12 +120,12 @@ Todo
 #### With Docker
 ##### Build docker image
 ```shell
-docker build -t friendlyfl-router:latest .
+docker build -t friendlyfl-controller:latest .
 ```
 
 ##### Start
 ```shell
-docker run -it -p 8000:8000 docker.io/library/friendlyfl-router:latest
+docker run -it -p 8000:8000 docker.io/library/friendlyfl-controller:latest
 ```
 
 #### Without Docker
