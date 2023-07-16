@@ -8,12 +8,30 @@
 <h2>Site Status</h2>
 {% if site_detail %}
     <p>Site <b>{{ site_uid }}</b> is currently registered. </p>
-    <p>Site name: <b>{{ site_detail.name }}</b> </p>
-    <p>Site description: <b>{{ site_detail.description }}</b>. </p>
 {% else %}
     <p>Site <b>{{ site_uid }}</b> is currently NOT registered.</p>
 {% endif %}
+<form action="/controller/" method="post">
+    {% csrf_token %}
+    <p>Site Name: {{ site_form.name }}</p>
+    <p>Site Description:</p>
+    <p>{{ site_form.description }}</p>
+    {% if site_detail %}
+        <p>
+            <input type="submit" name="change_site_info" value="Change Site Info">
+            <input type="submit" name="deregister_site" value="Deregister Site">
+        </p>
+    {% else %}
+        <p><input type="submit" name="register_site" value="Register Site"></p>
+    {% endif %}
+
+</form>
 
 <h2>Projects</h2>
+{% if site_detail %}
+    <p>Site projects are listed below. </p>
+{% else %}
+    <p>No projects available for a site NOT registered.</p>
+{% endif %}
 </body>
 </html>
