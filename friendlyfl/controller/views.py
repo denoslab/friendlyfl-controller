@@ -1,35 +1,36 @@
-from django.shortcuts import render
+import os
+import requests
+
 from django.http import HttpResponse
+from django.shortcuts import render
 from django.template import loader
+from dotenv import load_dotenv
+
+# take environment variables from .env.
+load_dotenv()
 
 
 # Create your views here.
 def index(request):
-    class Question:
 
-        def __init__(self):
-            self.id = 0
-            self.question_test = ''
+    # read vars from env
+    site_uid = os.getenv('SITE_UID')
+    router_url = os.getenv('ROUTER_URL')
+    router_username = os.getenv('ROUTER_USERNAME')
+    router_password = os.getenv('ROUTER_PASSWORD')
 
-    q1 = Question()
-    q2 = Question()
-    q1.id = 1
-    q1.question_text = "Text1"
-    q2.id = 2
-    q2.question_text = "Text2"
+    response = requests.get('{0}/sites/lookup?uid={1}'.format(router_url, site_uid),
+                            auth=(router_username, router_password))
+    site_list = response.json()
 
-    latest_question_list = [q1, q2]
+    # render template
     template = loader.get_template(
-        "controller/templates/controller/index.html")
+        "controller/index.html")
     context = {
-        "latest_question_list": latest_question_list,
+        # built-in uid of site
+        "site_uid": site_uid,
+        # if available, site info from router
+        "site_detail": site_list[0] if len(site_list) > 0 else None,
     }
     return HttpResponse(template.render(context, request))
 
-
-def list_projects(request):
-    response = request.get('http://http://localhost:8000/projects/')
-    # convert reponse data into json
-    users = response.json()
-    print(users)
-    return HttpResponse("Users")

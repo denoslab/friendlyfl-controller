@@ -2,17 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Projects</title>
 </head>
 <body>
-{% if latest_question_list %}
-    <ul>
-    {% for question in latest_question_list %}
-        <li><a href="/friendlyfl/controller/{{ question.id }}/">{{ question.question_text }}</a></li>
-    {% endfor %}
-    </ul>
+<h2>Site Status</h2>
+{% if site_detail %}
+    <p>Site <b>{{ site_uid }}</b> is currently registered. </p>
+    <p>Site name: <b>{{ site_detail.name }}</b> </p>
+    <p>Site description: <b>{{ site_detail.description }}</b>. </p>
 {% else %}
-    <p>No polls are available.</p>
+    <p>Site <b>{{ site_uid }}</b> is currently NOT registered.</p>
 {% endif %}
+
+<h2>Projects</h2>
 </body>
 </html>
