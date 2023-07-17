@@ -29,7 +29,7 @@ def index(request):
         if site_form.is_valid():
             site_name = site_form.cleaned_data['name']
             site_description = site_form.cleaned_data['description']
-            response = requests.get('{0}/sites/lookup?uid={1}'.format(router_url, site_uid),
+            response = requests.get('{0}/sites/lookup/?uid={1}'.format(router_url, site_uid),
                                     auth=(router_username, router_password))
             site_list = response.json()
             if len(site_list) > 0:
@@ -61,7 +61,7 @@ def index(request):
 
     # if a GET, load the form
     else:
-        response = requests.get('{0}/sites/lookup?uid={1}'.format(router_url, site_uid),
+        response = requests.get('{0}/sites/lookup/?uid={1}'.format(router_url, site_uid),
                                 auth=(router_username, router_password))
         site_list = response.json()
         current_site = None
