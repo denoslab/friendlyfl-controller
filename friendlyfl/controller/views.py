@@ -104,10 +104,26 @@ def index(request):
         return HttpResponse(template.render(context, request))
 
 
+def project_new(request):
+    # render template
+    template = loader.get_template(
+        "controller/project_new.html")
+    context = {}
+    return HttpResponse(template.render(context, request))
+
+
+def project_join(request):
+    # render template
+    template = loader.get_template(
+        "controller/project_join.html")
+    context = {}
+    return HttpResponse(template.render(context, request))
+
+
 def project_detail(request, project_id):
     # render template
     template = loader.get_template(
-        "controller/project-detail.html")
+        "controller/project_detail.html")
     context = {
         "project_id": project_id,
     }
