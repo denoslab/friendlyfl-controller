@@ -31,10 +31,12 @@ def index(request):
             site_description = site_form.cleaned_data['description']
             response = requests.get('{0}/sites/lookup/?uid={1}'.format(router_url, site_uid),
                                     auth=(router_username, router_password))
-            site_list = response.json()
-            if len(site_list) > 0:
+            current_site = None
+            if response.ok:
+                current_site = response.json()
+
+            if current_site:
                 # site already exists
-                current_site = site_list[0]
                 if 'deregister_site' in request.POST:
                     # delete site with DELETE
                     requests.delete('{0}/sites/{1}/'.format(router_url, current_site['id']),
@@ -63,13 +65,16 @@ def index(request):
     else:
         response = requests.get('{0}/sites/lookup/?uid={1}'.format(router_url, site_uid),
                                 auth=(router_username, router_password))
-        site_list = response.json()
+
+        # if current site exists, store it for use
         current_site = None
+        if response.ok:
+            current_site = response.json()
+
         project_participants = None
 
-        if len(site_list) > 0:
+        if current_site:
             # site already exists, init form with existing values
-            current_site = site_list[0]
             site_form = SiteForm(initial={
                 'name': current_site['name'],
                 'description': current_site['description'],
@@ -97,3 +102,29 @@ def index(request):
             "project_participants": project_participants,
         }
         return HttpResponse(template.render(context, request))
+
+
+def project_new(request):
+    # render template
+    template = loader.get_template(
+        "controller/project_new.html")
+    context = {}
+    return HttpResponse(template.render(context, request))
+
+
+def project_join(request):
+    # render template
+    template = loader.get_template(
+        "controller/project_join.html")
+    context = {}
+    return HttpResponse(template.render(context, request))
+
+
+def project_detail(request, project_id):
+    # render template
+    template = loader.get_template(
+        "controller/project_detail.html")
+    context = {
+        "project_id": project_id,
+    }
+    return HttpResponse(template.render(context, request))

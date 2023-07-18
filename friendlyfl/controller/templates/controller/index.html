@@ -38,9 +38,9 @@
 
 <h2>Projects</h2>
 <p>
-    <a href="project/new">Create New Project</a>
+    <a href="projects/new">Create New Project</a>
     &nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="project/join">Join A Project</a>
+    <a href="projects/join">Join A Project</a>
 </p>
 
 {% if site_detail %}
@@ -60,7 +60,7 @@
                 <td>{{ pp.project.description }}</td>
                 <td>{{ pp.role }}</td>
                 <td>{{ pp.project.updated_at }}</td>
-                <td><a href="project/{{ pp.project.id }}">Project Details</a></td>
+                <td><a href="projects/{{ pp.project.id }}">Project Details</a></td>
             </tr>
           {% endfor %}
         </tbody>
