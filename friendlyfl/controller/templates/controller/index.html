@@ -3,6 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <title>Projects</title>
+    <style>
+      table,
+      th,
+      td {
+        padding: 10px;
+        border: 1px solid black;
+        border-collapse: collapse;
+      }
+    </style>
 </head>
 <body>
 <h2>Site Status</h2>
@@ -28,8 +37,34 @@
 </form>
 
 <h2>Projects</h2>
+<p>
+    <a href="project/new">Create New Project</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="project/join">Join A Project</a>
+</p>
+
 {% if site_detail %}
     <p>Site projects are listed below. </p>
+    <table>
+        <thead>
+            <th>Project Name</th>
+            <th>Project Description</th>
+            <th>Site Role</th>
+            <th>Last Updated</th>
+            <th>Actions</th>
+        </thead>
+        <tbody>
+          {% for pp in project_participants %}
+            <tr>
+                <td>{{ pp.project.name }}</td>
+                <td>{{ pp.project.description }}</td>
+                <td>{{ pp.role }}</td>
+                <td>{{ pp.project.updated_at }}</td>
+                <td><a href="project/{{ pp.project.id }}">Project Details</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+    </table>
 {% else %}
     <p>No projects available for a site NOT registered.</p>
 {% endif %}

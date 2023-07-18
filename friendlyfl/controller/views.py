@@ -65,6 +65,7 @@ def index(request):
                                 auth=(router_username, router_password))
         site_list = response.json()
         current_site = None
+        project_participants = None
 
         if len(site_list) > 0:
             # site already exists, init form with existing values
@@ -73,6 +74,11 @@ def index(request):
                 'name': current_site['name'],
                 'description': current_site['description'],
             })
+            # get all projects this site is involved
+            response_project_participants = requests \
+                .get('{0}/projects/lookup/?site_id={1}'.format(router_url, current_site['id']),
+                     auth=(router_username, router_password))
+            project_participants = response_project_participants.json()
         else:
             # site does not exist, init blank form
             site_form = SiteForm()
@@ -87,5 +93,7 @@ def index(request):
             "site_detail": current_site,
             # site form
             "site_form": site_form,
+            # projects the site is involved
+            "project_participants": project_participants,
         }
         return HttpResponse(template.render(context, request))
