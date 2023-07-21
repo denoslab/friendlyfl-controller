@@ -7,5 +7,12 @@
 <body>
 <h1>Join A Project</h1>
 <p>Join an existing project.</p>
+<form action="./" method="post">
+    {% csrf_token %}
+    <p>Project Name: {{ project_join_form.name }}</p>
+    <p>Notes:</p>
+    <p>{{ project_join_form.notes }}</p>
+    <p><input type="submit" name="join" value="Join Project"></p>
+</form>
 </body>
 </html>

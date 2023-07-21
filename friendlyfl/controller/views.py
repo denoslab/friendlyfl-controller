@@ -2,25 +2,27 @@ import os
 import requests
 
 from django.http import HttpResponse
-from django.shortcuts import render
 from django.template import loader
 from dotenv import load_dotenv
 from django.http import HttpResponseRedirect
+import logging
+import json
 
-from .forms import SiteForm
+from .forms import SiteForm, ProjectJoinForm
 
 # take environment variables from .env.
 load_dotenv()
+logger = logging.getLogger(__name__)
+
+# read vars from env
+site_uid = os.getenv('SITE_UID')
+router_url = os.getenv('ROUTER_URL')
+router_username = os.getenv('ROUTER_USERNAME')
+router_password = os.getenv('ROUTER_PASSWORD')
 
 
 # Create your views here.
 def index(request):
-    # read vars from env
-    site_uid = os.getenv('SITE_UID')
-    router_url = os.getenv('ROUTER_URL')
-    router_username = os.getenv('ROUTER_USERNAME')
-    router_password = os.getenv('ROUTER_PASSWORD')
-
     # if this is a POST request we need to process the form data
     if request.method == "POST":
         # create a form instance and populate it with data from the request:
@@ -58,14 +60,12 @@ def index(request):
                 requests.post('{0}/sites/'.format(router_url),
                               auth=(router_username, router_password),
                               data=current_site)
-                # redirect to a new URL:
-            return HttpResponseRedirect("./")
-
+        # redirect to the same page
+        return HttpResponseRedirect("./")
     # if a GET, load the form
     else:
         response = requests.get('{0}/sites/lookup/?uid={1}'.format(router_url, site_uid),
                                 auth=(router_username, router_password))
-
         # if current site exists, store it for use
         current_site = None
         if response.ok:
@@ -113,10 +113,49 @@ def project_new(request):
 
 
 def project_join(request):
+    # if this is a POST request we need to process the form data
+    if request.method == "POST":
+        # create a form instance and populate it with data from the request:
+        project_join_form = ProjectJoinForm(request.POST)
+        # check if form is valid:
+        if project_join_form.is_valid():
+            project_name = project_join_form.cleaned_data['name']
+            notes = project_join_form.cleaned_data['notes']
+            response = requests.get('{0}/projects/lookup/?name={1}'.format(router_url, project_name),
+                                    auth=(router_username, router_password))
+            project_to_join = None
+            if response.ok:
+                project_to_join = response.json()
+            # retrieve site info
+            response = requests.get('{0}/sites/lookup/?uid={1}'.format(router_url, site_uid),
+                                    auth=(router_username, router_password))
+            current_site = None
+            if response.ok:
+                current_site = response.json()
+            if project_to_join:
+                # create new ProjectParticipant to join the project
+                project_participant = dict()
+                project_participant['site'] = current_site['id']
+                project_participant['project'] = project_to_join['id']
+                project_participant['role'] = 'PA'
+                project_participant['notes'] = notes
+                logger.warn(json.dumps(project_participant))
+                requests.post('{0}/project-participants/'.format(router_url),
+                              auth=(router_username, router_password),
+                              data=json.dumps(project_participant))
+        # redirect to the same page
+        return HttpResponseRedirect("/controller/")
+    # if a GET, load the form
+    else:
+        # site does not exist, init blank form
+        project_join_form = ProjectJoinForm()
+
     # render template
     template = loader.get_template(
         "controller/project_join.html")
-    context = {}
+    context = {
+        "project_join_form": project_join_form,
+    }
     return HttpResponse(template.render(context, request))
 
 
