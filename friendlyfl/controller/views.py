@@ -91,7 +91,7 @@ def index(request):
         else:
             # site does not exist, init blank form
             site_form = SiteForm()
-        
+
         project_leave_form = ProjectLeaveForm()
         # render template
         template = loader.get_template(
@@ -121,7 +121,7 @@ def project_leave(request):
             pp_id = project_leave_form.cleaned_data['participant_id']
             # get current site info
             rr = requests.delete('{0}/project-participants/{1}/'.format(router_url, pp_id),
-                            auth=(router_username, router_password))
+                                 auth=(router_username, router_password))
             print(rr)
     return redirect('index')
 
@@ -240,23 +240,27 @@ def project_detail(request, project_id, site_id):
         "project_id": project_id,
         "project_details": current_project,
         "participants": all_participants,
+        "site_id": site_id,
         "runs": all_runs
     }
     return HttpResponse(template.render(context, request))
 
 
-def run_detail(request, run_id):
-    response = requests.get('{0}/runs/{1}/'.format(router_url, run_id),
-                            auth=(router_username, router_password))
+def run_detail(request, batch, project_id, site_id):
+    runs_response = requests.get(
+        '{0}/runs/detail/?batch={1}&project={2}&site={3}'.format(
+            router_url, batch, project_id, site_id),
+        auth=(router_username, router_password))
     # if current site exists, store it for use
-    current_run = None
-    if response.ok:
-        current_run = response.json()
+    dic = {}
+    if runs_response.ok:
+        dic = runs_response.json()
     # run participants
     # render template
     template = loader.get_template(
         "controller/run_detail.html")
     context = {
-        "current_run": current_run,
+        "runs": dic['runs'] if dic else [],
+        "participant": dic['participant'] if dic else -1
     }
     return HttpResponse(template.render(context, request))

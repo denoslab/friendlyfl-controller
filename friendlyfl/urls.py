@@ -18,9 +18,11 @@ from django.contrib import admin
 from django.urls import include, path
 from django.shortcuts import redirect
 
+
 def redirect_to_new_url(request):
     new_url = 'controller/'  # Replace with the actual new URL
     return redirect(new_url)
+
 
 urlpatterns = [
     path('', redirect_to_new_url),
