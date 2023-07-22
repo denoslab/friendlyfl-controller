@@ -159,12 +159,32 @@ def project_join(request):
     return HttpResponse(template.render(context, request))
 
 
-def project_detail(request, project_id):
+def project_detail(request, project_id, site_id):
+    project_response = requests.get('{0}/projects/{1}/'.format(router_url, project_id),
+                                    auth=(router_username, router_password))
+    current_project = None
+    all_participants = None
+    all_runs = None
+    if project_response.ok:
+        current_project = project_response.json()
+    if site_id == current_project["site"]:
+        participants_response = requests.get('{0}/project-participants/lookup/?project={1}'.format(router_url, project_id),
+                                             auth=(router_username, router_password))
+        if participants_response.ok:
+            all_participants = participants_response.json()
+
+    runs_response = requests.get('{0}/runs/lookup/?project={1}'.format(router_url, project_id),
+                                 auth=(router_username, router_password))
+    if runs_response.ok:
+        all_runs = runs_response.json()
     # render template
     template = loader.get_template(
         "controller/project_detail.html")
     context = {
         "project_id": project_id,
+        "project_details": current_project,
+        "participants": all_participants,
+        "runs": all_runs
     }
     return HttpResponse(template.render(context, request))
 

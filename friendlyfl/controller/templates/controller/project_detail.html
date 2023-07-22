@@ -1,3 +1,5 @@
+{% load last_status_value from fl_tag %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +7,131 @@
     <title>Project Detail</title>
 </head>
 <body>
-<h1>Project Detail</h1>
-<p>Project id: {{ project_id }}</p>
+<h1>Controller - Project Details</h1>
+
+
+<style>
+    /* Container for the two columns */
+    .two-columns-container {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    /* Left column - adjust width as needed */
+    .left-column {
+        flex: 1;
+        padding-right: 20px; /* Add some space between left and right content */
+    }
+
+    /* Right column - adjust width as needed */
+    .right-column {
+        flex: 1;
+        padding-left: 20px; /* Add some space between left and right content */
+    }
+
+    /* Additional styles for your tables and paragraphs */
+    table {
+
+    }
+
+    p {
+        /* Your paragraph styles */
+    }
+</style>
+
+
+<div class="two-columns-container">
+    <div class="left-column">
+
+
+        <p>Project Name: {{ project_details.name }}</p>
+        {% with status=runs|last_status_value %}
+            <p>Status: {{ status }}</p>
+        {% endwith %}
+        <p>Total Running Time: TO_DO</p>
+
+        <h2>Tasks</h2>
+
+        <textarea id="jsonTextBox" rows="5" cols="50" readonly>
+        {% for item in project_details.tasks %}
+            {{ item }}
+        {% endfor %}
+        </textarea>
+    </div>
+
+    <div class="right-column">
+        <!-- Content for the right side -->
+        <p>
+            <input type="submit" name="start_new_run" value="New Run">
+        </p>
+        <p>Current Run: Round {{ runs | length }}</p>
+        <h2>Participants</h2>
+
+        <table>
+            <thead>
+            <th>Site ID</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Progress</th>
+            </thead>
+            <tbody>
+
+            {% for pp in participants %}
+                <tr>
+                    <td>{{ pp.id }}</td>
+                    <td>{{ pp.role }}</td>
+                    <td>{{ pp.site.status }}</td>
+                    <td>TO_DO</td>
+                </tr>
+            {% endfor %}
+            <tbody>
+
+        </table>
+
+        <h2>Runs</h2>
+
+        <table>
+            <tr>
+                <th>Round</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Status</th>
+                <th>Model Version</th>
+                <th>Actions</th>
+
+            </tr>
+
+            {% for run in runs %}
+                <tr>
+                    <td>{{ run.batch }}</td>
+                    <td>{{ run.created_at }}</td>
+                    <td>{{ run.updated_at }}</td>
+                    <td>{{ run.status }}</td>
+                    <td>{{ run.batch }}</td>
+                    <td>TO_DO</td>
+                </tr>
+            {% endfor %}
+        </table>
+        <style>
+            table {
+                width: 80%;
+                border-collapse: collapse;
+            }
+
+            th, td {
+                border: 1px solid #ddd;
+                padding: 1px;
+                text-align: center;
+            }
+
+            /* Add space between the two columns */
+            td:nth-child(2) {
+                padding-left: 20px; /* Adjust the value as needed */
+            }
+        </style>
+    </div>
+</div>
+
+
 </body>
 </html>
