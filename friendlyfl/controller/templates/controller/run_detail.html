@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Site Run Detail</title>
+    <style>
+      table,
+      th,
+      td {
+        padding: 10px;
+        border: 1px solid black;
+        border-collapse: collapse;
+      }
+    </style>
+</head>
+<body>
+
+<h2>Site Run Detail</h2>
+
+{% if current_run %}
+    <p>Run ID: {{ current_run.id }} </p>
+    <p>Project: {{ current_run.project.name }} </p>
+    <p>Current Batch: {{ current_run.batch }} </p>
+    <p>Participant Site: {{ current_run.participant.site.name }} </p>
+    <p>Site Role: {{ current_run.role }} </p>
+    <p>Run Status: {{ current_run.status }} </p>
+    <p>Site Role: {{ current_run.role }} </p>
+    <p>Time Created: {{ current_run.created_at }} </p>
+    <p>Last Updated: {{ current_run.updated_at }} </p>
+    <p>Logs:</p>
+    <p><textarea rows="4" cols="50">{{ current_run.logs }}</textarea></p>
+    <p>Artifacts: <a href="artifact/">Download</a></p>
+{% else %}
+    <p>No Run detail available.</p>
+{% endif %}
+</body>
+</html>

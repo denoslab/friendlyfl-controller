@@ -167,3 +167,20 @@ def project_detail(request, project_id):
         "project_id": project_id,
     }
     return HttpResponse(template.render(context, request))
+
+
+def run_detail(request, run_id):
+    response = requests.get('{0}/runs/{1}/'.format(router_url, run_id),
+                            auth=(router_username, router_password))
+    # if current site exists, store it for use
+    current_run = None
+    if response.ok:
+        current_run = response.json()
+    # run participants
+    # render template
+    template = loader.get_template(
+        "controller/run_detail.html")
+    context = {
+        "current_run": current_run,
+    }
+    return HttpResponse(template.render(context, request))
