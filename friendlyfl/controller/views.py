@@ -141,6 +141,7 @@ def project_join(request):
                 project_participant['notes'] = notes
                 logger.warn(json.dumps(project_participant))
                 requests.post('{0}/project-participants/'.format(router_url),
+                              headers={'Content-Type': 'application/json'},
                               auth=(router_username, router_password),
                               data=json.dumps(project_participant))
         # redirect to the same page
