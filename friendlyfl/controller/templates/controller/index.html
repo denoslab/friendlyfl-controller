@@ -60,7 +60,7 @@
                 <td>{{ pp.project.description }}</td>
                 <td>{{ pp.role }}</td>
                 <td>{{ pp.project.updated_at }}</td>
-                <td><a href="projects/{{ pp.project.id }}">Project Details</a></td>
+                <td><a href="projects/{{ pp.project.id}}/{{site_detail.id}}">Project Details</a></td>
             </tr>
           {% endfor %}
         </tbody>
