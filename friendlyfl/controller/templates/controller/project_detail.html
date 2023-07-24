@@ -45,9 +45,9 @@
 
 
         <p>Project Name: {{ project_details.name }}</p>
-{#        {% with status=runs|last_status_value %}#}
-{#            <p>Status: {{ status }}</p>#}
-{#        {% endwith %}#}
+        {% with status=runs|last_status_value %}
+            <p>Status: {{ status }}</p>
+        {% endwith %}
         <p>Total Running Time: TO_DO</p>
 
         <h2>Tasks</h2>
@@ -78,7 +78,7 @@
 
             {% for pp in participants %}
                 <tr>
-                    <td>{{ pp.id }}</td>
+                    <td>{{ pp.site.id }}</td>
                     <td>{{ pp.role }}</td>
                     <td>{{ pp.site.status }}</td>
                     <td>TO_DO</td>
