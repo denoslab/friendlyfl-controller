@@ -168,11 +168,11 @@ def project_detail(request, project_id, site_id):
     all_runs = None
     if project_response.ok:
         current_project = project_response.json()
-    if site_id == current_project["site"]:
-        participants_response = requests.get('{0}/project-participants/lookup/?project={1}'.format(router_url, project_id),
-                                             auth=(router_username, router_password))
-        if participants_response.ok:
-            all_participants = participants_response.json()
+        if site_id == current_project["site"]:
+            participants_response = requests.get('{0}/project-participants/lookup/?project={1}'.format(router_url, project_id),
+                                                 auth=(router_username, router_password))
+            if participants_response.ok:
+                all_participants = participants_response.json()
 
     runs_response = requests.get('{0}/runs/lookup/?project={1}'.format(router_url, project_id),
                                  auth=(router_username, router_password))
