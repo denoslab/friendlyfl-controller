@@ -7,5 +7,14 @@
 <body>
 <h1>Create New Project</h1>
 <p>New project information.</p>
+<form action="./" method="post">
+    {% csrf_token %}
+    <p>Project Name: {{ project_new_form.name }}</p>
+    <p>Project Description:</p>
+    <p>{{ project_new_form.description }}</p>
+    <p>Tasks:</p>
+    <p>{{ project_new_form.tasks }}</p>
+    <p><input type="submit" name="create_project" value="Create Project"></p>
+</form>
 </body>
 </html>

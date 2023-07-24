@@ -8,7 +8,7 @@ from django.http import HttpResponseRedirect
 import logging
 import json
 
-from .forms import SiteForm, ProjectJoinForm
+from .forms import SiteForm, ProjectJoinForm, ProjectNewForm
 
 # take environment variables from .env.
 load_dotenv()
@@ -31,6 +31,7 @@ def index(request):
         if site_form.is_valid():
             site_name = site_form.cleaned_data['name']
             site_description = site_form.cleaned_data['description']
+            # get current site info
             response = requests.get('{0}/sites/lookup/?uid={1}'.format(router_url, site_uid),
                                     auth=(router_username, router_password))
             current_site = None
@@ -58,6 +59,7 @@ def index(request):
                 current_site['description'] = site_description
                 # register new site
                 requests.post('{0}/sites/'.format(router_url),
+                              headers={'Content-Type': 'application/json'},
                               auth=(router_username, router_password),
                               data=current_site)
         # redirect to the same page
@@ -105,10 +107,44 @@ def index(request):
 
 
 def project_new(request):
+    if request.method == "POST":
+        # create a form instance and populate it with data from the request:
+        project_new_form = ProjectNewForm(request.POST)
+
+        # check if form is valid:
+        if project_new_form.is_valid():
+            project_name = project_new_form.cleaned_data['name']
+            description = project_new_form.cleaned_data['description']
+            tasks = project_new_form.cleaned_data['tasks']
+            # get current site info
+            response = requests.get('{0}/sites/lookup/?uid={1}'.format(router_url, site_uid),
+                                    auth=(router_username, router_password))
+            current_site = None
+            if response.ok:
+                current_site = response.json()
+
+            if current_site:
+                # create new Project
+                project = dict()
+                project['name'] = project_name
+                project['description'] = description
+                project['site'] = current_site['id']
+                project['tasks'] = []
+                requests.post('{0}/projects/'.format(router_url),
+                              headers={'Content-Type': 'application/json'},
+                              auth=(router_username, router_password),
+                              data=json.dumps(project))
+        # redirect to the home page
+        return HttpResponseRedirect("/controller/")
+    # if a GET, load the form
+    else:
+        project_new_form = ProjectNewForm(initial={'tasks': '{}'})
     # render template
     template = loader.get_template(
         "controller/project_new.html")
-    context = {}
+    context = {
+        "project_new_form": project_new_form,
+    }
     return HttpResponse(template.render(context, request))
 
 
@@ -139,12 +175,11 @@ def project_join(request):
                 project_participant['project'] = project_to_join['id']
                 project_participant['role'] = 'PA'
                 project_participant['notes'] = notes
-                logger.warn(json.dumps(project_participant))
                 requests.post('{0}/project-participants/'.format(router_url),
                               headers={'Content-Type': 'application/json'},
                               auth=(router_username, router_password),
                               data=json.dumps(project_participant))
-        # redirect to the same page
+        # redirect to the home page
         return HttpResponseRedirect("/controller/")
     # if a GET, load the form
     else:
