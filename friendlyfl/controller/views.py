@@ -49,8 +49,9 @@ def index(request):
                     current_site['name'] = site_name
                     current_site['description'] = site_description
                     requests.put('{0}/sites/{1}/'.format(router_url, current_site['id']),
+                                 headers={'Content-Type': 'application/json'},
                                  auth=(router_username, router_password),
-                                 data=current_site)
+                                 data=json.dumps(current_site))
             else:
                 # site does not exist, create site with POST
                 current_site = dict()
@@ -61,7 +62,7 @@ def index(request):
                 requests.post('{0}/sites/'.format(router_url),
                               headers={'Content-Type': 'application/json'},
                               auth=(router_username, router_password),
-                              data=current_site)
+                              data=json.dumps(current_site))
         # redirect to the same page
         return HttpResponseRedirect("./")
     # if a GET, load the form
