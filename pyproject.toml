@@ -11,6 +11,7 @@ django = "^4.2.3"
 python-dotenv = "^1.0.0"
 requests = "^2.31.0"
 django-tables2 = "^2.6.0"
+arrow = "^1.2.3"
 
 
 [tool.poetry.group.dev.dependencies]

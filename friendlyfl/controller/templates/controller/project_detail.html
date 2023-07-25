@@ -1,4 +1,6 @@
 {% load last_status_value from fl_tag %}
+{% load last_run_duration from fl_tag %}
+{% load site_duration from fl_tag %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -48,8 +50,7 @@
         {% with status=runs|last_status_value %}
             <p>Status: {{ status }}</p>
         {% endwith %}
-        <p>Total Running Time: TO_DO</p>
-
+        <p>Total Running Time: {{ runs|last_run_duration }}</p>
         <h2>Tasks</h2>
 
         <textarea id="jsonTextBox" rows="5" cols="50" readonly>
@@ -81,7 +82,7 @@
                     <td>{{ pp.site.id }}</td>
                     <td>{{ pp.role }}</td>
                     <td>{{ pp.site.status }}</td>
-                    <td>TO_DO</td>
+                    <td>{{ pp.site|site_duration }}</td>
                 </tr>
             {% endfor %}
             <tbody>
