@@ -6,6 +6,8 @@ class SiteForm(forms.Form):
     description = forms.CharField(
         label='Site Description', widget=forms.Textarea(attrs={'rows': 2, 'cols': 25}))
 
+class ProjectLeaveForm(forms.Form):
+    participant_id = forms.IntegerField(label='Participant ID')
 
 class ProjectNewForm(forms.Form):
     name = forms.CharField(label='Project Name', max_length=100)
