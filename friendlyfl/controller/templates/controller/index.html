@@ -52,15 +52,24 @@
             <th>Site Role</th>
             <th>Last Updated</th>
             <th>Actions</th>
+            <th>Leave Project</th>
         </thead>
         <tbody>
           {% for pp in project_participants %}
+
             <tr>
                 <td>{{ pp.project.name }}</td>
                 <td>{{ pp.project.description }}</td>
                 <td>{{ pp.role }}</td>
                 <td>{{ pp.project.updated_at }}</td>
                 <td><a href="projects/{{ pp.project.id}}/{{site_detail.id}}">Project Details</a></td>
+                <td>
+                    <form action= "/controller/projects/leave/" method = "post">
+                        {% csrf_token %}
+                        <input type="hidden" name="{{ project_leave_form.participant_id.name }}" value="{{ pp.id }}">
+                        <input type="submit" name="leave_project" value="Leave Project">
+                    </form>
+                </td>
             </tr>
           {% endfor %}
         </tbody>

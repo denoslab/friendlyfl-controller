@@ -3,12 +3,13 @@ import requests
 
 from django.http import HttpResponse
 from django.template import loader
+from django.shortcuts import redirect
 from dotenv import load_dotenv
 from django.http import HttpResponseRedirect
 import logging
 import json
 
-from .forms import SiteForm, ProjectJoinForm, ProjectNewForm
+from .forms import SiteForm, ProjectJoinForm, ProjectNewForm, ProjectLeaveForm
 
 # take environment variables from .env.
 load_dotenv()
@@ -90,7 +91,8 @@ def index(request):
         else:
             # site does not exist, init blank form
             site_form = SiteForm()
-
+        
+        project_leave_form = ProjectLeaveForm()
         # render template
         template = loader.get_template(
             "controller/index.html")
@@ -101,10 +103,28 @@ def index(request):
             "site_detail": current_site,
             # site form
             "site_form": site_form,
+            # project leave form
+            "project_leave_form": project_leave_form,
             # projects the site is involved
             "project_participants": project_participants,
         }
         return HttpResponse(template.render(context, request))
+
+
+def project_leave(request):
+    if request.method == "POST":
+        # create a form instance and populate it with data from the request:
+        print(request.POST)
+        project_leave_form = ProjectLeaveForm(request.POST)
+        # check if form is valid:
+        print(project_leave_form)
+        if project_leave_form.is_valid():
+            pp_id = project_leave_form.cleaned_data['participant_id']
+            # get current site info
+            rr = requests.delete('{0}/project-participants/{1}/'.format(router_url, pp_id),
+                            auth=(router_username, router_password))
+            print(rr)
+    return redirect('index')
 
 
 def project_new(request):
