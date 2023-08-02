@@ -1,13 +1,13 @@
+import json
+import logging
 import os
-import requests
 
+import requests
 from django.http import HttpResponse
+from django.http import HttpResponseRedirect
 from django.template import loader
 from django.shortcuts import redirect
 from dotenv import load_dotenv
-from django.http import HttpResponseRedirect
-import logging
-import json
 
 from .forms import SiteForm, ProjectJoinForm, ProjectNewForm, ProjectLeaveForm
 
@@ -225,8 +225,10 @@ def project_detail(request, project_id, site_id):
     if project_response.ok:
         current_project = project_response.json()
         if site_id == current_project["site"]:
-            participants_response = requests.get('{0}/project-participants/lookup/?project={1}'.format(router_url, project_id),
-                                                 auth=(router_username, router_password))
+            participants_response = requests.get(
+                '{0}/project-participants/lookup/?project={1}'.format(
+                    router_url, project_id),
+                auth=(router_username, router_password))
             if participants_response.ok:
                 all_participants = participants_response.json()
 
@@ -241,23 +243,29 @@ def project_detail(request, project_id, site_id):
         "project_id": project_id,
         "project_details": current_project,
         "participants": all_participants,
-        "runs": all_runs
+        "runs": all_runs,
+        "site_id": site_id
     }
     return HttpResponse(template.render(context, request))
 
 
-def run_detail(request, run_id):
-    response = requests.get('{0}/runs/{1}/'.format(router_url, run_id),
-                            auth=(router_username, router_password))
+def run_detail(request, batch, project_id, site_id):
+    runs_response = requests.get(
+        '{0}/runs/detail/?batch={1}&project={2}&site={3}'.format(
+            router_url, batch, project_id, site_id),
+        auth=(router_username, router_password))
+
     # if current site exists, store it for use
-    current_run = None
-    if response.ok:
-        current_run = response.json()
+    dic = {}
+    if runs_response.ok:
+        dic = runs_response.json()
     # run participants
     # render template
     template = loader.get_template(
         "controller/run_detail.html")
+
     context = {
-        "current_run": current_run,
+        "runs": dic['runs'] if dic else [],
+        "participant": dic['participant'] if dic else -1
     }
     return HttpResponse(template.render(context, request))
