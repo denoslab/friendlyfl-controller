@@ -109,7 +109,8 @@
                     <td>{{ run.updated_at }}</td>
                     <td>{{ run.status }}</td>
                     <td>{{ run.batch }}</td>
-                    <td>TO_DO</td>
+                    <td><a href="/controller/runs/detail/{{ run.batch }}/{{ project_id }}/{{ site_id }}">Details</a>
+                    </td>
                 </tr>
             {% endfor %}
         </table>
