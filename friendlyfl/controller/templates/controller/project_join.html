@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>Join A Project</title>
 </head>
+{% extends 'base.html' %}
+{% block content %}
 <body>
 <h1>Join A Project</h1>
 <p>Join an existing project.</p>
@@ -12,7 +14,9 @@
     <p>Project Name: {{ project_join_form.name }}</p>
     <p>Notes:</p>
     <p>{{ project_join_form.notes }}</p>
-    <p><input type="submit" name="join" value="Join Project"></p>
+    <p><input class ="btn btn-primary" type="submit" name="join" value="Join Project"></p>
 </form>
 </body>
+{% endblock %}
+
 </html>

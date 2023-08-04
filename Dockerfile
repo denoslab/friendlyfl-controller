@@ -15,6 +15,8 @@ RUN pip3 install poetry
 
 RUN poetry install
 
+RUN pip3 install django-bootstrap-v5
+
 COPY . /app/
 
 RUN chmod +x ./entrypoint.sh

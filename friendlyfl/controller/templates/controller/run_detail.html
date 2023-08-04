@@ -42,8 +42,9 @@
         }
     </style>
 </head>
+{% extends 'base.html' %}
+{% block content %}
 <body>
-
 <h2>Site Run Detail</h2>
 {% for run in runs %}
     {% if run %}
@@ -67,4 +68,5 @@
     {% endif %}
 {% endfor %}
 </body>
+{% endblock %}
 </html>
