@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>Create New Project</title>
 </head>
+{% extends 'base.html' %}
+{% block content %}
 <body>
 <h1>Create New Project</h1>
 <p>New project information.</p>
@@ -14,7 +16,8 @@
     <p>{{ project_new_form.description }}</p>
     <p>Tasks:</p>
     <p>{{ project_new_form.tasks }}</p>
-    <p><input type="submit" name="create_project" value="Create Project"></p>
+    <p><input class = "btn btn-success" type="submit" name="create_project" value="Create Project"></p>
 </form>
 </body>
+{% endblock %}
 </html>

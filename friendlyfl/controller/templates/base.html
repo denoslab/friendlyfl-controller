@@ -1,52 +1,40 @@
+<html>
 <head>
+    {% load bootstrap5 %}
+    {% bootstrap_css %}
+    {% bootstrap_javascript %}
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-        }
-
-        nav {
-            background-color: #333;
-            color: #fff;
-            padding: 10px;
-        }
-
-        nav ul {
-            list-style-type: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        nav ul li {
-            display: inline-block;
-            margin-right: 10px;
-        }
-
-        nav ul li a {
-            color: #fff;
-            text-decoration: none;
-            padding: 5px;
-        }
-
-        nav ul li a:hover {
-            background-color: #555;
+        .content {
+            margin: 0 auto;
         }
     </style>
 </head>
 <body>
-    <nav>
+    {% comment %} <nav>
         <!-- Your navbar HTML code here -->
         <ul>
             <li><a href="/controller">Controller</a></li>
             <li><a href="/controller/projects/new">Create Project</a></li>
             <li><a href="/controller/projects/join">Join Project</a></li>
         </ul>
-    </nav>
+    </nav> {% endcomment %}
+
+    <ul class="nav bg-info">
+        <li class="nav-item">
+            <a class="nav-link link-light" href="/controller">Home</a>
+          </li>
+        <li class="nav-item">
+          <a class="nav-link link-light" href="/controller/projects/new">Create Project</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link link-light" href="/controller/projects/join">Join Project</a>
+        </li>
+      </ul>
 
     <!-- Content block to be overridden by child templates -->
-    <div id="content">
+    <div id= "content">
         {% block content %}
         {% endblock %}
     </div>
 </body>
+</html>
