@@ -9,29 +9,29 @@
             display: flex;
             justify-content: space-between;
         }
-    
+
         /* Left column - adjust width as needed */
         .left-column {
             flex: 1;
             padding-right: 20px; /* Add some space between left and right content */
         }
-    
+
         /* Right column - adjust width as needed */
         .right-column {
             flex: 1;
             padding-left: 20px; /* Add some space between left and right content */
         }
-    
+
         /* Additional styles for your tables and paragraphs */
         table {
-    
+
         }
-    
+
         p {
             /* Your paragraph styles */
         }
     </style>
-    
+
 </head>
 {% extends 'base.html' %}
 {% block content %}
@@ -58,9 +58,11 @@
 
     <div class="right-column">
         <!-- Content for the right side -->
-        <p>
-            <input class= "btn btn-success" type="submit" name="start_new_run" value="New Run">
-        </p>
+        {% if can_start_runs %}
+            <p>
+                <input class= "btn btn-success" type="submit" name="start_new_run" value="New Run">
+            </p>
+        {% endif %}
         <p>Current Run: Round {{ runs | length }}</p>
         <h2>Participants</h2>
 

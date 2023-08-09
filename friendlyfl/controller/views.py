@@ -3,7 +3,9 @@ import requests
 
 from django.http import HttpResponse
 from django.template import loader
+from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
+from django.template import loader
 from dotenv import load_dotenv
 from django.http import HttpResponseRedirect
 import logging
@@ -221,6 +223,7 @@ def project_detail(request, project_id, site_id):
     current_project = None
     all_participants = None
     all_runs = None
+    can_start_runs = False
     if project_response.ok:
         current_project = project_response.json()
         if site_id == current_project["site"]:
@@ -228,6 +231,7 @@ def project_detail(request, project_id, site_id):
                                                  auth=(router_username, router_password))
             if participants_response.ok:
                 all_participants = participants_response.json()
+                can_start_runs = True
 
     runs_response = requests.get('{0}/runs/lookup/?project={1}'.format(router_url, project_id),
                                  auth=(router_username, router_password))
@@ -240,8 +244,9 @@ def project_detail(request, project_id, site_id):
         "project_id": project_id,
         "project_details": current_project,
         "participants": all_participants,
+        "runs": all_runs,
         "site_id": site_id,
-        "runs": all_runs
+        "can_start_runs": can_start_runs
     }
     return HttpResponse(template.render(context, request))
 
