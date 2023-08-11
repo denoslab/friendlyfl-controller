@@ -1,8 +1,9 @@
 import os
-from celery.utils.log import get_task_logger
 from celery import Celery
+from celery.utils.log import get_task_logger
 from kombu import Exchange, Queue
 
+from friendlyfl.controller.tasks.site_status_task import report_alive
 from friendlyfl.controller.utils import load_class, camel_to_snake
 
 logger = get_task_logger(__name__)
@@ -36,12 +37,8 @@ def fetch_run(args):
 
 
 @app.task(bind=True, queue='friendlyfl.run', name='site_heartbeat')
-def heartbeat():
-    """
-    TODO: Sync with router about heartbeat
-    :return:
-    """
-    pass
+def heartbeat(args):
+    report_alive()
 
 
 @app.task(bind=True, queue='friendlyfl.processor', name='process_task')
