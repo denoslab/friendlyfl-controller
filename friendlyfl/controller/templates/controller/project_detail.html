@@ -31,106 +31,144 @@
             /* Your paragraph styles */
         }
     </style>
-
 </head>
 {% extends 'base.html' %}
 {% block content %}
-<body>
-<h1>Controller - Project Details</h1>
-{% load last_status_value from fl_tag %}
-{% load last_run_duration from fl_tag %}
-{% load site_duration from fl_tag %}
-<div class="two-columns-container">
-    <div class="left-column">
-        <p>Project Name: {{ project_details.name }}</p>
-        {% with status=runs|last_status_value %}
-            <p>Status: {{ status }}</p>
-        {% endwith %}
-        <p>Total Running Time: {{ runs|last_run_duration }}</p>
-        <h2>Tasks</h2>
+    <body>
+    <div class="modal fade" id="warningModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalLabel">Warning</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="warningMessage">This is a warning message.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="closeModalButton">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $("#startButton").click(function () {
+                $.ajax({
+                    url: "/controller/runs/start/{{ project_id }}/{{ site_id }}/",
+                    success: function (data) {
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            $("#warningMessage").text(data.msg);
+                            $("#warningModal").modal("show");
+                        }
+                    },
+                    error: function (error) {
+                        console.error("An error occurred:", error);
+                    }
+                });
+            });
+        });
+    </script>
+    <h1>Controller - Project Details</h1>
+    {% load last_status_value from fl_tag %}
+    {% load last_run_duration from fl_tag %}
+    {% load site_duration from fl_tag %}
+    <div class="two-columns-container">
+        <div class="left-column">
+            <p>Project Name: {{ project_details.name }}</p>
+            {% with status=runs|last_status_value %}
+                <p>Status: {{ status }}</p>
+            {% endwith %}
+            <p>Total Running Time: {{ runs|last_run_duration }}</p>
+            <h2>Tasks</h2>
 
-        <textarea id="jsonTextBox" rows="5" cols="50" readonly>
+            <textarea id="jsonTextBox" rows="5" cols="50" readonly>
         {% for item in project_details.tasks %}
             {{ item }}
         {% endfor %}
         </textarea>
-    </div>
+        </div>
 
-    <div class="right-column">
-        <!-- Content for the right side -->
-        {% if can_start_runs %}
-            <p>
-                <input class= "btn btn-success" type="submit" name="start_new_run" value="New Run">
-            </p>
-        {% endif %}
-        <p>Current Run: Round {{ runs | length }}</p>
-        <h2>Participants</h2>
-
-        <table>
-            <thead>
-            <th>Site ID</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Progress</th>
-            </thead>
-            <tbody>
-
-            {% for pp in participants %}
-                <tr>
-                    <td>{{ pp.site.id }}</td>
-                    <td>{{ pp.role }}</td>
-                    <td>{{ pp.site.status }}</td>
-                    <td>{{ pp.site|site_duration }}</td>
-                </tr>
-            {% endfor %}
-            <tbody>
-
-        </table>
-
-        <h2>Runs</h2>
-
-        <table>
-            <tr>
-                <th>Round</th>
-                <th>Start Time</th>
-                <th>End Time</th>
+        <div class="right-column">
+            <!-- Content for the right side -->
+            <form>
+                {% if can_start_runs %}
+                    <button id="startButton" class="btn btn-success" type="submit">New Run</button>
+                {% endif %}
+            </form>
+            <p>Current Run Round: Round {{ runs | length }}</p>
+            <h2>Participants</h2>
+            <table>
+                <thead>
+                <th>Site ID</th>
+                <th>Role</th>
                 <th>Status</th>
-                <th>Model Version</th>
-                <th>Actions</th>
+                <th>Progress</th>
+                </thead>
+                <tbody>
 
-            </tr>
+                {% for pp in participants %}
+                    <tr>
+                        <td>{{ pp.site.id }}</td>
+                        <td>{{ pp.role }}</td>
+                        <td>{{ pp.site.status }}</td>
+                        <td>{{ pp.site|site_duration }}</td>
+                    </tr>
+                {% endfor %}
+                <tbody>
 
-            {% for run in runs %}
+            </table>
+
+            <h2>Runs</h2>
+
+            <table>
                 <tr>
-                    <td>{{ run.batch }}</td>
-                    <td>{{ run.created_at }}</td>
-                    <td>{{ run.updated_at }}</td>
-                    <td>{{ run.status }}</td>
-                    <td>{{ run.batch }}</td>
-                    <td><a href="/controller/runs/detail/{{ run.batch }}/{{ project_id }}/{{ site_id }}">Details</a>
-                    </td>
+                    <th>Round</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Status</th>
+                    <th>Model Version</th>
+                    <th>Actions</th>
+
                 </tr>
-            {% endfor %}
-        </table>
-        <style>
-            table {
-                width: 80%;
-                border-collapse: collapse;
-            }
 
-            th, td {
-                border: 1px solid #ddd;
-                padding: 1px;
-                text-align: center;
-            }
+                {% for run in runs %}
+                    <tr>
+                        <td>{{ run.batch }}</td>
+                        <td>{{ run.created_at }}</td>
+                        <td>{{ run.updated_at }}</td>
+                        <td>{{ run.status }}</td>
+                        <td>{{ run.batch }}</td>
+                        <td><a href="/controller/runs/detail/{{ run.batch }}/{{ project_id }}/{{ site_id }}">Details</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+            <style>
+                table {
+                    width: 80%;
+                    border-collapse: collapse;
+                }
 
-            /* Add space between the two columns */
-            td:nth-child(2) {
-                padding-left: 20px; /* Adjust the value as needed */
-            }
-        </style>
+                th, td {
+                    border: 1px solid #ddd;
+                    padding: 1px;
+                    text-align: center;
+                }
+
+                /* Add space between the two columns */
+                td:nth-child(2) {
+                    padding-left: 20px; /* Adjust the value as needed */
+                }
+            </style>
+        </div>
     </div>
-</div>
-</body>
+    </body>
 {% endblock %}
 </html>
