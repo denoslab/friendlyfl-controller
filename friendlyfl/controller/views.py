@@ -1,15 +1,14 @@
+import json
+import logging
 import os
-import requests
 
+import requests
 from django.http import HttpResponse
-from django.template import loader
 from django.http import HttpResponseRedirect
+from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.template import loader
 from dotenv import load_dotenv
-from django.http import HttpResponseRedirect
-import logging
-import json
 
 from .forms import SiteForm, ProjectJoinForm, ProjectNewForm, ProjectLeaveForm
 
@@ -227,8 +226,10 @@ def project_detail(request, project_id, site_id):
     if project_response.ok:
         current_project = project_response.json()
         if site_id == current_project["site"]:
-            participants_response = requests.get('{0}/project-participants/lookup/?project={1}'.format(router_url, project_id),
-                                                 auth=(router_username, router_password))
+            participants_response = requests.get(
+                '{0}/project-participants/lookup/?project={1}'.format(
+                    router_url, project_id),
+                auth=(router_username, router_password))
             if participants_response.ok:
                 all_participants = participants_response.json()
                 can_start_runs = True
@@ -269,3 +270,22 @@ def run_detail(request, batch, project_id, site_id):
         "participant": dic['participant'] if dic else -1
     }
     return HttpResponse(template.render(context, request))
+
+
+def start_runs(request, project_id, site_id):
+    if project_id and site_id:
+        data = dict()
+        data['project'] = project_id
+        response = requests.post('{0}/runs'.format(router_url),
+                                 headers={'Content-Type': 'application/json'},
+                                 auth=(router_username, router_password),
+                                 data=json.dumps(data))
+        if not response.ok:
+            return JsonResponse(
+                {'success': False, 'msg': 'Failed to start runs of new round due to {}'.format(response.text)})
+        else:
+            return JsonResponse(
+                {'success': True, 'msg': 'Successfully start runs of new round'})
+    else:
+        return JsonResponse(
+            {'success': False, 'msg': 'Project info not provided to start runs of new round'})
