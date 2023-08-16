@@ -70,9 +70,12 @@ def get_actions(status: str):
         actions.append(download)
         actions.append(restart)
         return actions
+    if code == 5:
+        return actions
     if code >= 2:
         actions.append(stop)
-        actions.append(restart)
+        if code > 2:
+            actions.append(restart)
         return actions
     actions.append(restart)
     return actions

@@ -10,7 +10,7 @@
     </style>
 </head>
 <body>
-    {% comment %} <nav>
+{% comment %} <nav>
         <!-- Your navbar HTML code here -->
         <ul>
             <li><a href="/controller">Controller</a></li>
@@ -18,23 +18,39 @@
             <li><a href="/controller/projects/join">Join Project</a></li>
         </ul>
     </nav> {% endcomment %}
-
-    <ul class="nav bg-info">
-        <li class="nav-item">
-            <a class="nav-link link-light" href="/controller">Home</a>
-          </li>
-        <li class="nav-item">
-          <a class="nav-link link-light" href="/controller/projects/new">Create Project</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link link-light" href="/controller/projects/join">Join Project</a>
-        </li>
-      </ul>
-
-    <!-- Content block to be overridden by child templates -->
-    <div id= "content">
-        {% block content %}
-        {% endblock %}
+<div class="modal fade" id="warningModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">Warning</h5>
+            </div>
+            <div class="modal-body">
+                <p id="warningMessage">This is a warning message.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="closeModalButton">Close</button>
+            </div>
+        </div>
     </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<ul class="nav bg-info">
+    <li class="nav-item">
+        <a class="nav-link link-light" href="/controller">Home</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link link-light" href="/controller/projects/new">Create Project</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link link-light" href="/controller/projects/join">Join Project</a>
+    </li>
+</ul>
+
+<!-- Content block to be overridden by child templates -->
+<div id="content">
+    {% block content %}
+    {% endblock %}
+</div>
 </body>
 </html>
