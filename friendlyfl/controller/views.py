@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import os
@@ -289,3 +290,37 @@ def start_runs(request, project_id, site_id):
     else:
         return JsonResponse(
             {'success': False, 'msg': 'Project info not provided to start runs of new round'})
+
+
+def perform_run_action(request, run_id, project_id, batch, role, action):
+    if run_id and project_id and batch and role and action:
+        if action == 'download':
+            response = requests.get('{0}/runs-action/download/?run={1}'.format(router_url, run_id),
+                                    headers={
+                                        'Content-Type': 'application/json'},
+                                    auth=(router_username, router_password))
+        else:
+            data = dict()
+            data['run'] = run_id
+            data['project'] = project_id
+            data['batch'] = batch
+            data['role'] = role
+            data['action'] = action
+            response = requests.put('{0}/runs-action/update/'.format(router_url),
+                                    headers={
+                                        'Content-Type': 'application/json'},
+                                    auth=(router_username, router_password),
+                                    data=json.dumps(data))
+        if not response.ok:
+            return JsonResponse(
+                {'success': False,
+                 'msg': 'Failed to perform {} action on run with id : {} due to {}'.format(action, run_id,
+                                                                                           response.text)})
+        else:
+            if action == 'download':
+                return JsonResponse({'success': True, 'msg': 'Successfully get run artifacts',
+                                     'content': base64.b64encode(response.content).decode('utf-8')})
+            return JsonResponse({'success': True, 'msg': 'Successfully update run status'})
+    else:
+        return JsonResponse(
+            {'success': False, 'msg': 'Run info not provided to perform action'})

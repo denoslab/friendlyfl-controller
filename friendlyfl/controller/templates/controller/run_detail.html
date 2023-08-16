@@ -44,29 +44,66 @@
     </style>
 </head>
 {% block content %}
-<body>
-<h2>Site Run Detail</h2>
-{% for run in runs %}
-    {% if run %}
-        <div class="box {% if participant ==  run.participant and runs|length > 1 %}current-highlight-box{% endif %}">
-            <p>Run ID: {{ run.id }} </p>
-            <p>Project: {{ run.project }} </p>
-            <p>Current Batch: {{ run.batch }} </p>
-            <p>Participant Site: {{ run.participant }} </p>
-            <p>Site Role: {{ run.role }} </p>
-            <p>Run Status: {{ run.status }} </p>
-            <p>Site Role: {{ run.role }} </p>
-            <p>Time Created: {{ run.created_at }} </p>
-            <p>Last Updated: {{ run.updated_at }} </p>
-            <p>Logs:</p>
-            <p><textarea rows="4" cols="50">{{ run.logs }}</textarea></p>
-            <p>Actions:</p>
-            {% for action in run.status|get_actions %}
-                <a href="artifact/{{ action }}" class="btn btn-primary">{{ action|upper_first_char }}</a>
-            {% endfor %}
-        </div>
-    {% endif %}
-{% endfor %}
-</body>
+    <body>
+    <script>
+        $(document).ready(function () {
+            $(".btn.btn-primary").click(function () {
+                var url = $(this).data("message");
+                $.ajax({
+                    url: url,
+                    success: function (data) {
+                        if (data.success) {
+                            if (null != data.content) {
+                                initiateDownload(data.content, "artifacts")
+                            }
+                            location.reload();
+                        } else {
+                            $("#warningMessage").text(data.msg);
+                            $("#warningModal").modal("show");
+                        }
+                    },
+                    error: function (error) {
+                        console.error("An error occurred:", error);
+                    }
+                });
+            });
+        });
+
+        function initiateDownload(content, fileName) {
+            const link = document.createElement('a');
+            link.href = `data:application/zip;base64,${content}`;
+            link.download = fileName;
+            link.click();
+        }
+
+        $('#closeModalButton').click(function () {
+            $('#warningModal').modal('hide');
+        });
+    </script>
+    <h2>Site Run Detail</h2>
+    {% for run in runs %}
+        {% if run %}
+            <div class="box {% if participant ==  run.participant and runs|length > 1 %}current-highlight-box{% endif %}">
+                <p>Run ID: {{ run.id }} </p>
+                <p>Project: {{ run.project }} </p>
+                <p>Current Batch: {{ run.batch }} </p>
+                <p>Participant Site: {{ run.participant }} </p>
+                <p>Site Role: {{ run.role }} </p>
+                <p>Run Status: {{ run.status }} </p>
+                <p>Time Created: {{ run.created_at }} </p>
+                <p>Last Updated: {{ run.updated_at }} </p>
+                <p>Logs:</p>
+                <p><textarea rows="4" cols="50">{{ run.logs }}</textarea></p>
+                {% if run.status|get_actions %}
+                    <p>Actions:</p>
+                    {% for action in run.status|get_actions %}
+                        <a data-message="/controller/runs/action/{{ run.id }}/{{ run.project }}/{{ run.batch }}/{{ run.role }}/{{ action }}"
+                           class="btn btn-primary">{{ action|upper_first_char }}</a>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endfor %}
+    </body>
 {% endblock %}
 </html>
