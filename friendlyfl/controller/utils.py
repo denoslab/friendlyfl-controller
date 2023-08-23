@@ -1,5 +1,7 @@
-from importlib import import_module
+import json
+import pkgutil
 import re
+from importlib import import_module
 
 
 def load_class(module_name, class_name):
@@ -10,3 +12,12 @@ def load_class(module_name, class_name):
 
 def camel_to_snake(name):
     return re.sub('(?!^)([A-Z]+)', r'_\1', name).lower()
+
+
+def parse_tasks(tasks_str):
+    if not tasks_str or tasks_str == '{}':
+        return None
+    try:
+        return json.loads(tasks_str)
+    except json.JSONDecodeError:
+        return None
