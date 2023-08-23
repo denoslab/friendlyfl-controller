@@ -12,6 +12,7 @@ from django.template import loader
 from dotenv import load_dotenv
 
 from .forms import SiteForm, ProjectJoinForm, ProjectNewForm, ProjectLeaveForm
+from .tasks_validator import TaskValidator
 
 # take environment variables from .env.
 load_dotenv()
@@ -138,12 +139,22 @@ def project_new(request):
             project_name = project_new_form.cleaned_data['name']
             description = project_new_form.cleaned_data['description']
             tasks = project_new_form.cleaned_data['tasks']
+            validator = TaskValidator(tasks)
+            task_list = validator.get_validated_tasks()
+            if task_list is None or len(task_list) == 0:
+                return JsonResponse(
+                    {'success': False,
+                     'msg': 'Tasks provided is not valid due to {}'.format(validator.get_error_msg())})
             # get current site info
             response = requests.get('{0}/sites/lookup/?uid={1}'.format(router_url, site_uid),
                                     auth=(router_username, router_password))
             current_site = None
             if response.ok:
                 current_site = response.json()
+            else:
+                return JsonResponse(
+                    {'success': False,
+                     'msg': 'Failed to get current site information with site id {}'.format(site_uid)})
 
             if current_site:
                 # create new Project
@@ -151,13 +162,24 @@ def project_new(request):
                 project['name'] = project_name
                 project['description'] = description
                 project['site'] = current_site['id']
-                project['tasks'] = []
+                project['tasks'] = task_list
                 requests.post('{0}/projects/'.format(router_url),
                               headers={'Content-Type': 'application/json'},
                               auth=(router_username, router_password),
                               data=json.dumps(project))
+                if response.ok:
+                    return JsonResponse(
+                        {'success': True,
+                         'msg': 'Successfully create new project with name {}'.format(project_name)})
+                else:
+                    return JsonResponse(
+                        {'success': False,
+                         'msg': 'Failed to create new project due to {}'.format(response.text)})
+
         # redirect to the home page
-        return HttpResponseRedirect("/controller/")
+        return JsonResponse(
+            {'success': False,
+             'msg': 'Project info provided is not valid'})
     # if a GET, load the form
     else:
         project_new_form = ProjectNewForm(initial={'tasks': '{}'})

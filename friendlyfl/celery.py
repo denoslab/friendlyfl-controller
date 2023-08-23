@@ -3,7 +3,7 @@ from celery import Celery
 from celery.utils.log import get_task_logger
 from kombu import Exchange, Queue
 
-from friendlyfl.controller.tasks.site_status_task import report_alive
+from friendlyfl.controller.site_status_task import report_alive
 from friendlyfl.controller.utils import load_class, camel_to_snake
 
 logger = get_task_logger(__name__)
