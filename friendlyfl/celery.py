@@ -1,10 +1,12 @@
+import json
 import os
+import requests
 from celery import Celery
 from celery.utils.log import get_task_logger
 from kombu import Exchange, Queue
-
+from friendlyfl.controller import redis
 from friendlyfl.controller.site_status_task import report_alive
-from friendlyfl.controller.utils import load_class, camel_to_snake
+from friendlyfl.controller.utils import load_class, camel_to_snake, format_status
 
 logger = get_task_logger(__name__)
 
@@ -21,19 +23,52 @@ app.conf.task_queues = {
           routing_key='friendlyfl.processor')
 }
 
+router_url = os.getenv('ROUTER_URL')
+router_username = os.getenv('ROUTER_USERNAME')
+router_password = os.getenv('ROUTER_PASSWORD')
+site_id = os.getenv('SITE_UID')
+
+run_key = 'friendlyfl:controller:run:list:'
+
 
 @app.task(bind=True, queue='friendlyfl.run', name='fetch_run')
 def fetch_run(args):
     """
-    TODO: Fetch run status based on site_id and keep the status.
+    Fetch run status based on site_id, cache it and notify processor.
     :return:
     """
     logger.debug("Received: {}".format(args))
 
-    site_id = os.getenv('SITE_UID')
-    logger.debug("Fetching runs by site_id: {}".format(site_id))
-    process_task.s({'model': 'LogisticRegression'}).apply_async(
-        queue='friendlyfl.processor')
+    runs = check_status_change(site_id)
+    if runs:
+        for run in runs:
+            process_task.s(run, False).apply_async(
+                queue='friendlyfl.processor')
+
+
+@app.task(bind=True, queue='friendlyfl.run', name='monitor_run')
+def monitor_run(args):
+    """
+    Monitor coordinator run in waiting status
+    :param args:
+    :return:
+    """
+    run_list = fetch()
+    if run_list:
+        retry_run = []
+        for r in run_list:
+            if r['site_uid'] == site_id and r['role'] == 'coordinator':
+                exist_run = get_run_from_redis(r)
+                if exist_run:
+                    run = json.loads(exist_run)
+                    # TODO: Check waiting status: preparing, pending aggregating
+                    if r['status'] == run['status'] and True:
+                        retry_run.append(r)
+
+        if retry_run:
+            for run in retry_run:
+                process_task.s(run, True).apply_async(
+                    queue='friendlyfl.processor')
 
 
 @app.task(bind=True, queue='friendlyfl.run', name='site_heartbeat')
@@ -42,24 +77,82 @@ def heartbeat(args):
 
 
 @app.task(bind=True, queue='friendlyfl.processor', name='process_task')
-def process_task(args, options):
+def process_task(args, run, is_retry):
     """
-    TODO: Process task based on model. Need logic check and etc.
     :param args:
-    :param options:
+    :param run: run model
+    :param is_retry: whether the task is triggered by retry
     :return:
     """
-    logger.debug("Received: {} options: {}".format(args, options))
-    model = options['model']
+    logger.debug("Received: {} options: {}".format(args, run))
+    cur_seq = run['cur_seq']
+    tasks = run['tasks']
+    model = tasks[cur_seq - 1]['model']
+    status = run['status']
     logger.debug("Model: {}".format(model))
     try:
         klass = load_class('friendlyfl.controller.tasks.{}'.format(
             camel_to_snake(model)), model)
         logger.debug("Class: {}".format(klass))
-        instance = klass(1, {})
-        instance.standby()
+        instance = klass(run)
+        instance.method_call(format_status(status))
+
     except (ImportError, AttributeError) as e:
         logger.warn("{} not found with error: {}".format(model, e))
 
 
+def fetch():
+    headers = {'Content-type': 'application/json'}
+    data = dict()
+    response = requests.get('{0}/runs/active/'.format(router_url),
+                            headers=headers,
+                            auth=(router_username, router_password),
+                            data=json.dumps(data))
+    if response.ok:
+        return response.json()
+    else:
+        return None
+
+
+def check_status_change(site_id) -> []:
+    """
+    Check run status to decide whether send message to task processor
+    :return:
+    """
+    run_list = fetch()
+    if run_list:
+        changed_run = []
+        for r in run_list:
+            if r['site_uid'] == site_id:
+                exist_run = get_run_from_redis(r)
+                if exist_run:
+                    run = json.loads(exist_run)
+                    if r['status'] != run['status']:
+                        changed_run.append(r)
+                        add_to_redis(r)
+                else:
+                    changed_run.append(r)
+                    add_to_redis(r)
+        return changed_run
+    return None
+
+
+def get_run_from_redis(run):
+    r = redis.get_redis()
+    return r.get(run_key + str(run['id']))
+
+
+def add_to_redis(run):
+    logger.debug(json.dumps(run))
+    r = redis.get_redis()
+    k = run_key + str(run['id'])
+    r.set(k, json.dumps(run), ex=86400)
+
+
+def reset_cache():
+    r = redis.get_redis()
+    r.delete(run_key)
+
+
+reset_cache()
 app.autodiscover_tasks()

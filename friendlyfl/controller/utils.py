@@ -21,3 +21,12 @@ def parse_tasks(tasks_str):
         return json.loads(tasks_str)
     except json.JSONDecodeError:
         return None
+
+
+def format_status(status):
+    """
+    Example: Pending Aggregating -> pending_aggregating
+    :param status: status with space
+    :return: status with underscore
+    """
+    return status.replace(" ", "_").lower()
