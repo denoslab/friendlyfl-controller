@@ -92,6 +92,10 @@ CELERY_BROKER_URL = os.getenv(
 CELERY_RESULT_BACKEND = os.getenv(
     "CELERY_RESULT_BACKEND", default="redis://redis:6379")
 
+REDIS_HOST = os.getenv('REDIS_HOST', default="redis")
+REDIS_PORT = os.getenv('REDIS_PORT', default=6379)
+REDIS_DB = os.getenv('REDIS_DB', default=0)
+
 CELERY_TASK_ROUTES = {
     'fetch_run': {'queue': 'friendlyfl.run'},
     'process_task': {'queue': 'friendlyfl.processor'}
@@ -101,6 +105,11 @@ CELERY_BEAT_SCHEDULE = {
     'fetch_run': {
         'task': 'fetch_run',
         'schedule': 5,
+        'options': {'queue': 'friendlyfl.run'}
+    },
+    'monitor_run': {
+        'task': 'monitor_run',
+        'schedule': 10,
         'options': {'queue': 'friendlyfl.run'}
     },
     'heartbeat': {
