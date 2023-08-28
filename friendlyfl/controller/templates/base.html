@@ -3,11 +3,6 @@
     {% load bootstrap5 %}
     {% bootstrap_css %}
     {% bootstrap_javascript %}
-    <style>
-        .content {
-            margin: 0 auto;
-        }
-    </style>
 </head>
 <body>
 {% comment %} <nav>
@@ -48,7 +43,7 @@
 </ul>
 
 <!-- Content block to be overridden by child templates -->
-<div id="content">
+<div id="content" class="m-5">
     {% block content %}
     {% endblock %}
 </div>
