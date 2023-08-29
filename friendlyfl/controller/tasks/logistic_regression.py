@@ -1,10 +1,11 @@
 from friendlyfl.controller.tasks.abstract_task import AbstractTask
 from typing import Tuple, Union, List
 import numpy as np
-from sklearn.linear_model import LogisticRegression
 import openml
+import logging
+import sklearn.linear_model
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 XY = Tuple[np.ndarray, np.ndarray]
 Dataset = Tuple[XY, XY]
@@ -36,30 +37,35 @@ class LogisticRegression(AbstractTask):
         self.y_train = None
         self.X_test = None
         self.y_test = None
+        # load dataset
+        logger.warning('Loading MNIST dataset...')
+        (self.X_train, self.y_train), (self.X_test, self.y_test) = load_mnist()
+        logger.warning(f'Training data shape: {self.X_train.shape}')
+        logger.warning(f'Training label shape: {self.y_train.shape}')
 
     def validate(self) -> bool:
         """
         This step is used to load and validate the input data.
         """
-        (self.X_train, self.y_train), (self.X_test, self.y_test) = load_mnist()
-        logger.warn(f'Training data shape: {self.X_train.shape}')
-        logger.warn(f'Training label shape: {self.y_train.shape}')
+
         return True
 
     def training(self) -> bool:
         """
         This step is used for training.
+        all parameters not specified are set to their defaults
+        default solver is incredibly slow thats why we change it
         """
-        # all parameters not specified are set to their defaults
-        # default solver is incredibly slow thats why we change it
-        self.logisticRegr = LogisticRegression(
+
+        self.logisticRegr = sklearn.linear_model.LogisticRegression(
             penalty="l2",
             max_iter=1,  # local epoch
             warm_start=True,  # prevent refreshing weights when fitting
         )
+        logger.warning('Starting training...')
         self.logisticRegr.fit(self.X_train, self.y_train)
-        score = self.logisticRegr.score()
-        logger.warn(f'Model score: {score}')
+        score = self.logisticRegr.score(self.X_test, self.y_test)
+        logger.warning(f'Training complete. Model score: {score}')
         return True
 
     def do_aggregate(self) -> bool:
