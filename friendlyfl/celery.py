@@ -62,7 +62,8 @@ def monitor_run(args):
                 if exist_run:
                     run = json.loads(exist_run)
                     # TODO: Check waiting status: preparing, pending aggregating
-                    if r['status'] == run['status'] and True:
+                    if format_status(r['status']) == format_status(run['status']) and \
+                            format_status(r['status']) in ['preparing', 'pending_aggregating']:
                         retry_run.append(r)
 
         if retry_run:
@@ -127,7 +128,7 @@ def check_status_change(site_id) -> []:
                 exist_run = get_run_from_redis(r)
                 if exist_run:
                     run = json.loads(exist_run)
-                    if r['status'] != run['status']:
+                    if format_status(r['status']) != format_status(run['status']):
                         changed_run.append(r)
                         add_to_redis(r)
                 else:
