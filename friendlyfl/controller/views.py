@@ -11,6 +11,7 @@ from django.shortcuts import redirect
 from django.template import loader
 from dotenv import load_dotenv
 
+from .file.file_utils import gen_logs_url
 from .forms import SiteForm, ProjectJoinForm, ProjectNewForm, ProjectLeaveForm
 from .tasks_validator import TaskValidator
 
@@ -346,3 +347,29 @@ def perform_run_action(request, run_id, project_id, batch, role, action):
     else:
         return JsonResponse(
             {'success': False, 'msg': 'Run info not provided to perform action'})
+
+
+def fetch_logs(request):
+    run_id = request.GET.get('run_id')
+    task_seq = request.GET.get('task_seq')
+    round_seq = request.GET.get('round_seq')
+    line = int(request.GET.get('line'))
+    logs_url = gen_logs_url(run_id, task_seq, round_seq)
+    try:
+        # with open(logs_url, 'r') as log_file:
+        with open(logs_url, 'r') as file:
+            lines = file.readlines()
+
+            # Calculate the index for the start line
+            start_index = max(line, 0)
+
+            # Extract the lines from the start index
+            selected_lines = lines[start_index:]
+
+            # Return the selected lines as a list
+            return JsonResponse({'success': True, 'content': selected_lines})
+    except FileNotFoundError:
+        msg = "No logs yet"
+
+    return JsonResponse(
+        {'success': False, 'msg': msg})

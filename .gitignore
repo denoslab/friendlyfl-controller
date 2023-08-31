@@ -45,7 +45,7 @@ wheels/
 *.manifest 
 *.spec 
 
-# Installer logs 
+# Installer file
 pip-log.txt 
 pip-delete-this-directory.txt 
 

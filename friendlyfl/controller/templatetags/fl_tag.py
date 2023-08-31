@@ -86,3 +86,15 @@ def upper_first_char(status: str):
     if not status:
         return ''
     return status[:1].upper() + status[1:]
+
+
+@register.filter
+def get_cur_round(run):
+    if run and 'cur_seq' in run and 'tasks' in run:
+        task_seq = run['cur_seq']
+        tasks = run['tasks']
+        if task_seq and tasks and len(tasks) > 0:
+            cur_task = tasks[task_seq - 1]
+            if cur_task and len(cur_task) > 0 and 'config' in cur_task:
+                return cur_task['config']['current_round']
+    return None
