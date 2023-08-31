@@ -82,7 +82,7 @@
                     <button id="startButton" class="btn btn-success" type="submit">New Run</button>
                 {% endif %}
             </form>
-            <p>Current Run Round: Round {{ runs | length }}</p>
+            <p>Current Project Batch: {{ runs | length }}</p>
             <h2>Participants</h2>
             <table>
                 <thead>
@@ -109,7 +109,7 @@
 
             <table>
                 <tr>
-                    <th>Round</th>
+                    <th>Batch</th>
                     <th>Start Time</th>
                     <th>End Time</th>
                     <th>Status</th>

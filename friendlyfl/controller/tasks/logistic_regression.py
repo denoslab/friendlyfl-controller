@@ -1,13 +1,10 @@
-import logging
-
-from friendlyfl.controller.tasks.abstract_task import AbstractTask
 from typing import Tuple, Union, List
+
 import numpy as np
 import openml
-import logging
 import sklearn.linear_model
 
-logger = logging.getLogger(__name__)
+from friendlyfl.controller.tasks.abstract_task import AbstractTask
 
 XY = Tuple[np.ndarray, np.ndarray]
 Dataset = Tuple[XY, XY]
@@ -40,10 +37,10 @@ class LogisticRegression(AbstractTask):
         self.X_test = None
         self.y_test = None
         # load dataset
-        logger.warning('Loading MNIST dataset...')
+        self.logger.warning('Loading MNIST dataset...')
         (self.X_train, self.y_train), (self.X_test, self.y_test) = load_mnist()
-        logger.warning(f'Training data shape: {self.X_train.shape}')
-        logger.warning(f'Training label shape: {self.y_train.shape}')
+        self.logger.warning(f'Training data shape: {self.X_train.shape}')
+        self.logger.warning(f'Training label shape: {self.y_train.shape}')
 
     def validate(self) -> bool:
         """
@@ -52,8 +49,7 @@ class LogisticRegression(AbstractTask):
         task_round = self.get_round()
         validate_log = "Run {} - task -{} - round {} task begins".format(
             self.run_id, self.cur_seq, task_round)
-        self.add_logs(validate_log)
-        logger.debug(validate_log)
+        self.logger.debug(validate_log)
 
         return True
 
@@ -69,14 +65,11 @@ class LogisticRegression(AbstractTask):
             max_iter=1,  # local epoch
             warm_start=True,  # prevent refreshing weights when fitting
         )
-        logger.warning('Starting training...')
+        self.logger.warning('Starting training...')
         self.logisticRegr.fit(self.X_train, self.y_train)
         score = self.logisticRegr.score(self.X_test, self.y_test)
-        logger.warning(f'Training complete. Model score: {score}')
+        self.logger.warning(f'Training complete. Model score: {score}')
         return True
 
     def do_aggregate(self) -> bool:
-        return True
-
-    def download_artifacts(self) -> bool:
         return True
