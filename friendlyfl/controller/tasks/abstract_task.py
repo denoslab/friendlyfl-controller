@@ -7,14 +7,12 @@ from abc import ABC, abstractmethod
 import requests
 from dotenv import load_dotenv
 
-from friendlyfl.controller.file.file_utils import append_logs, read_file_from_url, \
-    gen_mid_artifacts_url, gen_logs_url
+from friendlyfl.controller.file.file_utils import read_file_from_url, gen_logs_url, save_all_mid_artifacts, \
+    gen_mid_artifacts_url, create_if_not_exist
+# take environment variables from .env.
 from friendlyfl.controller.utils import format_status
 
-
-# take environment variables from .env.
 load_dotenv()
-logger = logging.getLogger(__name__)
 
 # read vars from env
 site_uid = os.getenv('SITE_UID')
@@ -36,22 +34,22 @@ class AbstractTask(ABC):
     role = None
     artifact = None
     status = None
+    logger = None
 
     def __init__(self, run):
         self.project_id = run['project']
         self.run_id = run['id']
         self.batch_id = run['batch']
         self.role = run['role']
-        self.tasks = run['tasks']
-        self.cur_seq = run['cur_seq']
         self.status = run['status']
+        self.logger = self.post_init(run)
 
     def method_call(self, name: str, *args, **kwargs):
         if hasattr(self, name) and callable(getattr(self, name)):
             func = getattr(self, name)
             func(*args, **kwargs)
         else:
-            logger.warning("method {} not exists".format(name))
+            self.logger.warning("method {} not exists".format(name))
 
     def standby(self, *args, **kwargs):
         """
@@ -62,11 +60,10 @@ class AbstractTask(ABC):
         """
         try:
             run = args[0]
-            self.cur_seq = run['cur_seq']
-            self.tasks = run['tasks']
+            self.logger = self.post_init(run)
             s = inspect.currentframe().f_code.co_name
             if self.status == s:
-                logger.warning(
+                self.logger.warning(
                     "Already in status {}. Ignore message".format(s))
                 return
             else:
@@ -77,7 +74,7 @@ class AbstractTask(ABC):
             else:
                 self.notify(1)
         except Exception as e:
-            logger.warning("Exception in standby status: {}".format(e))
+            self.logger.warning("Exception in standby status: {}".format(e))
             self.notify(1)
 
     def preparing(self, *args, **kwargs):
@@ -98,13 +95,13 @@ class AbstractTask(ABC):
                     self.notify(4)
             else:
                 if self.status == s:
-                    logger.warning(
+                    self.logger.warning(
                         "Already in status {}. Ignore message".format(s))
                     return
                 else:
                     self.status = s
         except Exception as e:
-            logger.warning("Exception in preparing status: {}".format(e))
+            self.logger.warning("Exception in preparing status: {}".format(e))
 
     def running(self, *args, **kwargs):
         """
@@ -116,7 +113,7 @@ class AbstractTask(ABC):
         try:
             s = inspect.currentframe().f_code.co_name
             if self.status == s:
-                logger.warning(
+                self.logger.warning(
                     "Already in status {}. Ignore message".format(s))
                 return
             else:
@@ -128,7 +125,7 @@ class AbstractTask(ABC):
             else:
                 self.notify(1)
         except Exception as e:
-            logger.warning("Exception in running status: {}".format(e))
+            self.logger.warning("Exception in running status: {}".format(e))
 
     def pending_success(self, *args, **kwargs):
         """
@@ -141,7 +138,8 @@ class AbstractTask(ABC):
             if self.upload():
                 self.notify(6)
         except Exception as e:
-            logger.warning("Exception in pending_success status: {}".format(e))
+            self.logger.warning(
+                "Exception in pending_success status: {}".format(e))
 
     def pending_aggregating(self, *args, **kwargs):
         """
@@ -161,13 +159,13 @@ class AbstractTask(ABC):
                     self.notify(7)
             else:
                 if self.status == s:
-                    logger.warning(
+                    self.logger.warning(
                         "Already in status {}. Ignore message".format(s))
                     return
                 else:
                     self.status = s
         except Exception as e:
-            logger.warning(
+            self.logger.warning(
                 "Exception in pending aggregating status: {}".format(e))
 
     def aggregating(self, *args, **kwargs):
@@ -186,7 +184,8 @@ class AbstractTask(ABC):
                     self.notify(0)
                 if self.do_aggregate():
                     is_last_round = self.is_last_round()
-                    logger.debug("Is the last round? {}".format(is_last_round))
+                    self.logger.debug(
+                        "Is the last round? {}".format(is_last_round))
                     if is_last_round:
                         self.notify(8)
                     else:
@@ -195,13 +194,14 @@ class AbstractTask(ABC):
                     self.notify(0)
             else:
                 if self.status == s:
-                    logger.warning(
+                    self.logger.warning(
                         "Already in status {}. Ignore message".format(s))
                     return
                 else:
                     self.status = s
         except Exception as e:
-            logger.warning("Exception in aggregating status: {}".format(e))
+            self.logger.warning(
+                "Exception in aggregating status: {}".format(e))
 
     def pending_failed(self, *args, **kwargs):
         """
@@ -214,7 +214,8 @@ class AbstractTask(ABC):
             if self.upload():
                 self.notify(0)
         except Exception as e:
-            logger.warning("Exception in pending failed status: {}".format(e))
+            self.logger.warning(
+                "Exception in pending failed status: {}".format(e))
 
     @abstractmethod
     def validate(self) -> bool:
@@ -224,14 +225,48 @@ class AbstractTask(ABC):
     def training(self) -> bool:
         return True
 
-    @abstractmethod
     def download_artifacts(self) -> bool:
         """
-        TODO: Download all artifacts for aggregating
         :return:
         """
-        logger.debug("Downloading artifacts")
-        return True
+        task_round = self.get_round()
+        if task_round:
+            log = "Downloading artifacts"
+            self.logger.debug(log)
+
+            response = requests.get(
+                '{0}/runs-action/download/?run={1}&task_seq={2}&round_seq={3}&all_runs={4}&type={5}'.format(router_url,
+                                                                                                            self.run_id,
+                                                                                                            self.cur_seq,
+                                                                                                            task_round,
+                                                                                                            1,
+                                                                                                            'mid_artifacts'),
+                auth=(router_username, router_password))
+
+            if response.status_code == 404:
+                self.logger.warning('No mid-artifacts found in router for project {} at batch {}'.format(
+                    self.project_id, self.batch_id))
+                return True
+
+            if response.status_code == 200:
+
+                content = response.content
+
+                self.logger.debug(
+                    'Will  save all mid-artifacts to local for project {} at batch {}'.format(self.project_id,
+                                                                                              self.batch_id))
+
+                saved_url = save_all_mid_artifacts(
+                    self.project_id, self.batch_id, content)
+
+                if saved_url:
+                    self.logger.warning(
+                        'Successfully download and save all mid-artifacts to local for project {} at batch {} in {} dir'.format(
+                            self.project_id, self.batch_id, saved_url))
+                    return True
+                self.logger.warning('Failed to save mid-artifacts to local for project {} at batch {}'.format(
+                    self.project_id, self.batch_id))
+        return False
 
     @abstractmethod
     def do_aggregate(self) -> bool:
@@ -245,7 +280,7 @@ class AbstractTask(ABC):
         task_round = self.get_round()
         if task_round:
 
-            logger.warning('will upload logs and mid-artifacts')
+            self.logger.debug('will upload logs and mid-artifacts')
 
             files_data = dict()
             data = dict()
@@ -264,19 +299,19 @@ class AbstractTask(ABC):
             data['task_seq'] = self.cur_seq
             data['round_seq'] = task_round
             if any(files_data.values()):
+
                 response = requests.post('{0}/runs-action/upload/'.format(router_url, self.run_id),
-                                         auth=(router_username,
-                                               router_password),
+                                         auth=(router_username, router_password),
                                          data=data,
                                          files=files_data)
                 if response.status_code == 200:
-                    logger.debug(
+                    self.logger.debug(
                         'Successfully upload logs and mid-artifacts of run {} - task {} - round {}'.format(self.run_id,
                                                                                                            self.cur_seq,
                                                                                                            task_round))
                     return True
             else:
-                logger.debug("Files data is empty. Ignore upload")
+                self.logger.debug("Files data is empty. Ignore upload")
                 return True
 
         return False
@@ -310,14 +345,14 @@ class AbstractTask(ABC):
         2. check total_round and current_round inside tasks
         :return:
         """
-        logger.debug(
+        self.logger.debug(
             "Checking whether it is the last round. cur_seq: {}, tasks: {}".format(self.cur_seq, len(self.tasks)))
         if self.cur_seq >= len(self.tasks):
             c = self.tasks[self.cur_seq - 1]['config']
             if 'total_round' in c and 'current_round' in c:
                 total_round = c['total_round']
                 current_round = c['current_round']
-                logger.debug("Total Round: {}, Current Round: {}".format(
+                self.logger.debug("Total Round: {}, Current Round: {}".format(
                     total_round, current_round))
                 return current_round >= total_round
             else:
@@ -331,9 +366,9 @@ class AbstractTask(ABC):
         :param expected_state:
         :return:
         """
-        logger.debug("Checking whether all runs are in the same status")
+        self.logger.debug("Checking whether all runs are in the same status")
         runs = self.fetch_runs()
-        logger.debug("expected state: {}. All runs: {}".format(
+        self.logger.debug("expected state: {}. All runs: {}".format(
             expected_state, runs))
         if runs:
             for r in runs:
@@ -351,18 +386,51 @@ class AbstractTask(ABC):
                     return True
         return False
 
-    # This method can be used to append logs into local file system
-    def add_logs(self, log):
-        task_round = self.get_round()
-        if round:
-            append_logs(self.run_id, self.cur_seq, task_round, log)
-        else:
-            logger.debug("Failed to save logs since not round info found")
-
     # This method can be used to get current round of current task
+
     def get_round(self):
         if self.tasks and len(self.tasks) > 0:
             cur_task = self.tasks[self.cur_seq - 1]
             if cur_task and len(cur_task) > 0 and 'config' in cur_task:
                 return cur_task['config']['current_round']
         return None
+
+    def add_mid_artifacts(self, content):
+        # todo
+        # Note: user should define how to save mid-artifacts to local(save once or append along the training), and the method to get file path is provied already in file_utils.py
+        pass
+
+    def post_init(self, run):
+        self.cur_seq = run['cur_seq']
+        self.tasks = run['tasks']
+        cur_round = self.get_round()
+        url = gen_logs_url(self.run_id, self.cur_seq, cur_round)
+        create_if_not_exist(url)
+
+        logger = logging.getLogger(
+            'logger-{}-{}-{}'.format(self.run_id, self.cur_seq, cur_round))
+        logger.setLevel(logging.DEBUG)  # Set the logging level as needed
+
+        # Create a log formatter
+        log_formatter = logging.Formatter(
+            '%(asctime)s [%(levelname)s] %(message)s')
+
+        # Create a file handler to save logs to a file
+        file_handler = logging.FileHandler(url)
+        # Set the desired log level for the file handler
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(log_formatter)
+
+        # Create a console handler to print logs to the console
+        console_handler = logging.StreamHandler()
+        # Set the desired log level for the console handler
+        console_handler.setLevel(logging.DEBUG)
+        console_handler.setFormatter(log_formatter)
+
+        # Add the handlers to the logger
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+        logger.debug(
+            "Init logger for run {} - seq {} - round {} ".format(self.run_id, self.cur_seq, cur_round))
+        return logger
