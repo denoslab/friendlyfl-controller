@@ -1,0 +1,62 @@
+version: '3.9'
+
+services:
+  friendlyfl-controller:
+    build:
+      context: .
+    image: friendlyfl-controller
+    ports:
+      - '8001:8000'
+    env_file:
+      - .env
+    command: bash -c "cron && poetry run python3 manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - artifacts:/friendlyfl-controller/local
+
+  controller-scheduler:
+    build:
+      context: .
+    image: friendlyfl-controller
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    entrypoint: [ "poetry", "run", "celery", "-A", "friendlyfl", "beat", "-l", "DEBUG" ]
+    volumes:
+      - artifacts:/friendlyfl-controller/local
+
+  controller-run-worker:
+    build:
+      context: .
+    image: friendlyfl-controller
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    entrypoint: [ "poetry", "run", "celery", "-A", "friendlyfl", "worker", "-l", "DEBUG", "-Q", "friendlyfl.run" ]
+    volumes:
+      - artifacts:/friendlyfl-controller/local
+
+  controller-processor-worker:
+    build:
+      context: .
+    image: friendlyfl-controller
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    entrypoint: [ "poetry", "run", "celery", "-A", "friendlyfl", "worker", "-l", "DEBUG", "-Q", "friendlyfl.processor" ]
+    volumes:
+      - artifacts:/friendlyfl-controller/local
+
+
+  redis:
+    image: redis:5.0
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/opt/redis/data
+
+volumes:
+  artifacts: {}
+  redis_data: {}

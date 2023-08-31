@@ -1,10 +1,13 @@
 import json
-from abc import ABC, abstractmethod
+import logging
 import os
+from abc import ABC, abstractmethod
+
 import requests
 from dotenv import load_dotenv
-import logging
 
+from friendlyfl.controller.file.file_utils import append_logs, read_file_from_url, \
+    gen_mid_artifacts_url, gen_logs_url
 # take environment variables from .env.
 from friendlyfl.controller.utils import format_status
 
@@ -89,7 +92,7 @@ class AbstractTask(ABC):
         Status: Pending Success,5
         Next Status: Pending Aggregating,6; Standby,2
         Called when current participant successfully completes the task.
-        In this event, output file and logs will be uploaded to RS for forwarding to Coordinator.
+        In this event, output file and file will be uploaded to RS for forwarding to Coordinator.
         """
         if self.upload():
             self.notify(6)
@@ -130,7 +133,7 @@ class AbstractTask(ABC):
         Status: Pending Failed,1
         Next Status: Failed,0
         Called when current participant fails to complete the task.
-        In this event, logs will be uploaded to RS for forwarding to Coordinator.
+        In this event, file will be uploaded to RS for forwarding to Coordinator.
         """
         if self.upload():
             self.notify(0)
@@ -160,7 +163,41 @@ class AbstractTask(ABC):
         return True
 
     def upload(self) -> bool:
-        return True
+        # Here assume when round of task success, it should upload both mid-artifacts and logs to router
+        task_round = self.get_round()
+        if task_round:
+
+            self.add_logs('will upload logs and mid-artifacts')
+
+            files_data = dict()
+            data = dict()
+
+            mid_artifacts_url = gen_mid_artifacts_url(
+                self.run_id, self.cur_seq, task_round)
+            logs_url = gen_logs_url(self.run_id, self.cur_seq, task_round)
+
+            if mid_artifacts_url:
+                files_data['mid_artifacts'] = read_file_from_url(
+                    mid_artifacts_url)
+            if logs_url:
+                files_data['logs'] = read_file_from_url(logs_url)
+
+            data['run'] = self.run_id
+            data['task_seq'] = self.cur_seq
+            data['round_seq'] = task_round
+
+            response = requests.post('{0}/runs-action/upload/'.format(router_url, self.run_id),
+                                     auth=(router_username, router_password),
+                                     data=data,
+                                     files=files_data)
+            if response.status_code == 200:
+                logger.debug(
+                    'Successfully upload logs and mid-artifacts of run {} - task {} - round {}'.format(self.run_id,
+                                                                                                       self.cur_seq,
+                                                                                                       task_round))
+                return True
+
+        return False
 
     def notify(self, next_state, param: dict = None):
         if param is None:
@@ -223,3 +260,19 @@ class AbstractTask(ABC):
             return True
         else:
             return False
+
+    # This method can be used to append logs into local file system
+    def add_logs(self, log):
+        task_round = self.get_round()
+        if round:
+            append_logs(self.run_id, self.cur_seq, task_round, log)
+        else:
+            logger.debug("Failed to save logs since not round info found")
+
+    # This method can be used to get current round of current task
+    def get_round(self):
+        if self.tasks and len(self.tasks) > 0:
+            cur_task = self.tasks[self.cur_seq - 1]
+            if cur_task and len(cur_task) > 0 and 'config' in cur_task:
+                return cur_task['config']['current_round']
+        return None

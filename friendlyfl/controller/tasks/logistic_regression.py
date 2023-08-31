@@ -1,3 +1,5 @@
+import logging
+
 from friendlyfl.controller.tasks.abstract_task import AbstractTask
 from typing import Tuple, Union, List
 import numpy as np
@@ -27,6 +29,8 @@ def load_mnist() -> Dataset:
     x_test, y_test = X[60000:], y[60000:]
     return (x_train, y_train), (x_test, y_test)
 
+logger = logging.getLogger(__name__)
+
 
 class LogisticRegression(AbstractTask):
 
@@ -47,6 +51,11 @@ class LogisticRegression(AbstractTask):
         """
         This step is used to load and validate the input data.
         """
+        task_round = self.get_round()
+        validate_log = "Run {} - task -{} - round {} task begins".format(
+            self.run_id, self.cur_seq, task_round)
+        self.add_logs(validate_log)
+        logger.debug(validate_log)
 
         return True
 

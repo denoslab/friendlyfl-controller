@@ -13,4 +13,6 @@ urlpatterns = [
     path("runs/start/<int:project_id>/<int:site_id>/", views.start_runs),
     path("runs/action/<int:run_id>/<int:project_id>/<int:batch>/<str:role>/<str:action>/",
          views.perform_run_action),
+    path("runs/fetch_logs/",
+         views.fetch_logs),
 ]
