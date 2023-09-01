@@ -1,7 +1,11 @@
 import json
-import pkgutil
 import re
+import time
 from importlib import import_module
+
+
+def epoch_time_in_sec():
+    return int(time.time())
 
 
 def load_class(module_name, class_name):
@@ -29,4 +33,4 @@ def format_status(status):
     :param status: status with space
     :return: status with underscore
     """
-    return status.replace(" ", "_").lower()
+    return status.replace(" ", "_").lower() if status else None

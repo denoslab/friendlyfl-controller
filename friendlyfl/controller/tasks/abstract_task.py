@@ -1,3 +1,4 @@
+import inspect
 import json
 import logging
 import os
@@ -8,9 +9,10 @@ from dotenv import load_dotenv
 
 from friendlyfl.controller.file.file_utils import append_logs, read_file_from_url, \
     gen_mid_artifacts_url, gen_logs_url
-# take environment variables from .env.
 from friendlyfl.controller.utils import format_status
 
+
+# take environment variables from .env.
 load_dotenv()
 logger = logging.getLogger(__name__)
 
@@ -33,83 +35,142 @@ class AbstractTask(ABC):
     tasks = None
     role = None
     artifact = None
+    status = None
 
     def __init__(self, run):
         self.project_id = run['project']
         self.run_id = run['id']
         self.batch_id = run['batch']
-        self.cur_seq = run['cur_seq']
         self.role = run['role']
         self.tasks = run['tasks']
+        self.cur_seq = run['cur_seq']
+        self.status = run['status']
 
-    def method_call(self, name: str):
+    def method_call(self, name: str, *args, **kwargs):
         if hasattr(self, name) and callable(getattr(self, name)):
             func = getattr(self, name)
-            func()
+            func(*args, **kwargs)
         else:
             logger.warning("method {} not exists".format(name))
 
-    def standby(self):
+    def standby(self, *args, **kwargs):
         """
         Status: Standby,2
         Next Status: Preparing,3;Pending Failed,1
         Called when a task starts. Current participant will start to prepare the run.
         In this event, notify router.
         """
-        valid = self.validate()
-        if valid:
-            self.notify(3)
-        else:
+        try:
+            run = args[0]
+            self.cur_seq = run['cur_seq']
+            self.tasks = run['tasks']
+            s = inspect.currentframe().f_code.co_name
+            if self.status == s:
+                logger.warning(
+                    "Already in status {}. Ignore message".format(s))
+                return
+            else:
+                self.status = s
+            valid = self.validate()
+            if valid:
+                self.notify(3)
+            else:
+                self.notify(1)
+        except Exception as e:
+            logger.warning("Exception in standby status: {}".format(e))
             self.notify(1)
 
-    def preparing(self):
+    def preparing(self, *args, **kwargs):
         """
         Status: Preparing,3
-        Next Status: Running,4
+        Next Status: Running,4; Pending Failed,1
         Called when a task starts. Current participant will start to prepare the run.
         In this event, input data files are validated.
         """
-        if self.role == 'coordinator':
-            if self.runs_in_same_state('preparing'):
-                self.notify(4)
-            # TODO: check failed
+        try:
+            s = inspect.currentframe().f_code.co_name
+            if self.role == 'coordinator':
+                self.status = s
+                if self.runs_in_fails():
+                    self.notify(1)
+                    return
+                if self.runs_in_same_state('preparing'):
+                    self.notify(4)
+            else:
+                if self.status == s:
+                    logger.warning(
+                        "Already in status {}. Ignore message".format(s))
+                    return
+                else:
+                    self.status = s
+        except Exception as e:
+            logger.warning("Exception in preparing status: {}".format(e))
 
-    def running(self):
+    def running(self, *args, **kwargs):
         """
         Status: Running,4
         Next Status: Pending Success,5;Pending Failed,1
         Called when all participants have prepared to run.
         In this event, input data files are used for training.
         """
-        valid = self.training()
-        if valid:
-            self.notify(5)
-        else:
-            self.notify(1)
+        try:
+            s = inspect.currentframe().f_code.co_name
+            if self.status == s:
+                logger.warning(
+                    "Already in status {}. Ignore message".format(s))
+                return
+            else:
+                self.status = s
 
-    def pending_success(self):
+            valid = self.training()
+            if valid:
+                self.notify(5)
+            else:
+                self.notify(1)
+        except Exception as e:
+            logger.warning("Exception in running status: {}".format(e))
+
+    def pending_success(self, *args, **kwargs):
         """
         Status: Pending Success,5
         Next Status: Pending Aggregating,6; Standby,2
         Called when current participant successfully completes the task.
         In this event, output file and file will be uploaded to RS for forwarding to Coordinator.
         """
-        if self.upload():
-            self.notify(6)
+        try:
+            if self.upload():
+                self.notify(6)
+        except Exception as e:
+            logger.warning("Exception in pending_success status: {}".format(e))
 
-    def pending_aggregating(self):
+    def pending_aggregating(self, *args, **kwargs):
         """
         Status: Pending Aggregating, 6
-        Next Status: Aggregating, 7
+        Next Status: Aggregating, 7; Failed, 0
         Participant: Do nothing
         Coordinator: Waiting for all participants been changed to this status and download the artifacts
         :return:
         """
-        if self.role == 'coordinator':
-            if self.runs_in_same_state('pending_aggregating') and self.download_artifacts():
-                self.notify(7)
+        try:
+            s = inspect.currentframe().f_code.co_name
+            if self.role == 'coordinator':
+                self.status = s
+                if self.runs_in_fails():
+                    self.notify(0)
+                if self.runs_in_same_state('pending_aggregating') and self.download_artifacts():
+                    self.notify(7)
+            else:
+                if self.status == s:
+                    logger.warning(
+                        "Already in status {}. Ignore message".format(s))
+                    return
+                else:
+                    self.status = s
+        except Exception as e:
+            logger.warning(
+                "Exception in pending aggregating status: {}".format(e))
 
-    def aggregating(self):
+    def aggregating(self, *args, **kwargs):
         """
         Status: Aggregating, 7
         Next Status: Standby,2; Success,8; Failed,0
@@ -117,26 +178,43 @@ class AbstractTask(ABC):
         Coordinator: Aggregate artifacts from all participants and upload the final artifact.
         :return:
         """
-        if self.role == 'coordinator':
-            if self.do_aggregate():
-                is_last_round = self.is_last_round()
-                logger.debug("Is the last round? {}".format(is_last_round))
-                if is_last_round:
-                    self.notify(8)
+        try:
+            s = inspect.currentframe().f_code.co_name
+            if self.role == 'coordinator':
+                self.status = s
+                if self.runs_in_fails():
+                    self.notify(0)
+                if self.do_aggregate():
+                    is_last_round = self.is_last_round()
+                    logger.debug("Is the last round? {}".format(is_last_round))
+                    if is_last_round:
+                        self.notify(8)
+                    else:
+                        self.notify(2, param={'increase_round': True})
                 else:
-                    self.notify(2, param={'increase_round': True})
+                    self.notify(0)
             else:
-                self.notify(0)
+                if self.status == s:
+                    logger.warning(
+                        "Already in status {}. Ignore message".format(s))
+                    return
+                else:
+                    self.status = s
+        except Exception as e:
+            logger.warning("Exception in aggregating status: {}".format(e))
 
-    def pending_failed(self):
+    def pending_failed(self, *args, **kwargs):
         """
         Status: Pending Failed,1
         Next Status: Failed,0
         Called when current participant fails to complete the task.
         In this event, file will be uploaded to RS for forwarding to Coordinator.
         """
-        if self.upload():
-            self.notify(0)
+        try:
+            if self.upload():
+                self.notify(0)
+        except Exception as e:
+            logger.warning("Exception in pending failed status: {}".format(e))
 
     @abstractmethod
     def validate(self) -> bool:
@@ -167,7 +245,7 @@ class AbstractTask(ABC):
         task_round = self.get_round()
         if task_round:
 
-            self.add_logs('will upload logs and mid-artifacts')
+            logger.warning('will upload logs and mid-artifacts')
 
             files_data = dict()
             data = dict()
@@ -185,16 +263,20 @@ class AbstractTask(ABC):
             data['run'] = self.run_id
             data['task_seq'] = self.cur_seq
             data['round_seq'] = task_round
-
-            response = requests.post('{0}/runs-action/upload/'.format(router_url, self.run_id),
-                                     auth=(router_username, router_password),
-                                     data=data,
-                                     files=files_data)
-            if response.status_code == 200:
-                logger.debug(
-                    'Successfully upload logs and mid-artifacts of run {} - task {} - round {}'.format(self.run_id,
-                                                                                                       self.cur_seq,
-                                                                                                       task_round))
+            if any(files_data.values()):
+                response = requests.post('{0}/runs-action/upload/'.format(router_url, self.run_id),
+                                         auth=(router_username,
+                                               router_password),
+                                         data=data,
+                                         files=files_data)
+                if response.status_code == 200:
+                    logger.debug(
+                        'Successfully upload logs and mid-artifacts of run {} - task {} - round {}'.format(self.run_id,
+                                                                                                           self.cur_seq,
+                                                                                                           task_round))
+                    return True
+            else:
+                logger.debug("Files data is empty. Ignore upload")
                 return True
 
         return False
@@ -260,6 +342,14 @@ class AbstractTask(ABC):
             return True
         else:
             return False
+
+    def runs_in_fails(self) -> bool:
+        runs = self.fetch_runs()
+        if runs:
+            for r in runs:
+                if format_status(r['status']) in ['pending_failed', 'failed']:
+                    return True
+        return False
 
     # This method can be used to append logs into local file system
     def add_logs(self, log):

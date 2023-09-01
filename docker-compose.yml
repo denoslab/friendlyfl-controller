@@ -45,7 +45,7 @@ services:
       - redis
     env_file:
       - .env
-    entrypoint: [ "poetry", "run", "celery", "-A", "friendlyfl", "worker", "-l", "DEBUG", "-Q", "friendlyfl.processor" ]
+    entrypoint: [ "poetry", "run", "celery", "-A", "friendlyfl", "worker", "-l", "DEBUG", "--concurrency=1", "-Q", "friendlyfl.processor" ]
     volumes:
       - artifacts:/friendlyfl-controller/local
 

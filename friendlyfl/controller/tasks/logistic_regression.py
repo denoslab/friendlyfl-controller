@@ -29,8 +29,6 @@ def load_mnist() -> Dataset:
     x_test, y_test = X[60000:], y[60000:]
     return (x_train, y_train), (x_test, y_test)
 
-logger = logging.getLogger(__name__)
-
 
 class LogisticRegression(AbstractTask):
 

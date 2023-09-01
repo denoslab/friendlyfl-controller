@@ -1,4 +1,7 @@
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 base_folder = '/friendlyfl-controller/local'
 
@@ -10,21 +13,24 @@ artifacts_name = 'artifacts.txt'
 
 
 def append_logs(run_id, task_seq, round_seq, log):
-    url = gen_logs_url(run_id, task_seq, round_seq)
-    if url:
-        file_path = Path(url)
-        if file_path.exists():
-            # Open the file in append mode and write the content
-            with file_path.open(mode='a') as file:
-                file.write(log + '\n')
-        else:
-            # Create a new file with the content
-            file_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        url = gen_logs_url(run_id, task_seq, round_seq)
+        if url:
+            file_path = Path(url)
+            if file_path.exists():
+                # Open the file in append mode and write the content
+                with file_path.open(mode='a') as file:
+                    file.write(log + '\n')
+            else:
+                # Create a new file with the content
+                file_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Create the file
-            file_path.touch()
-            with file_path.open(mode='w') as file:
-                file.write(log + '\n')
+                # Create the file
+                file_path.touch()
+                with file_path.open(mode='w') as file:
+                    file.write(log + '\n')
+    except Exception as e:
+        logger.warning("Error while append log to file: {}".format(e))
 
 
 def gen_url(run_id, task_seq, round_seq, file_name):
