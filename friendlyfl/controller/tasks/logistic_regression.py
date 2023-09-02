@@ -41,6 +41,11 @@ class LogisticRegression(AbstractTask):
         (self.X_train, self.y_train), (self.X_test, self.y_test) = load_mnist()
         self.logger.warning(f'Training data shape: {self.X_train.shape}')
         self.logger.warning(f'Training label shape: {self.y_train.shape}')
+        self.logisticRegr = sklearn.linear_model.LogisticRegression(
+            penalty="l2",
+            max_iter=1,  # local epoch
+            warm_start=True,  # prevent refreshing weights when fitting
+        )
 
     def validate(self) -> bool:
         """
@@ -60,11 +65,6 @@ class LogisticRegression(AbstractTask):
         default solver is incredibly slow thats why we change it
         """
 
-        self.logisticRegr = sklearn.linear_model.LogisticRegression(
-            penalty="l2",
-            max_iter=1,  # local epoch
-            warm_start=True,  # prevent refreshing weights when fitting
-        )
         self.logger.warning('Starting training...')
         self.logisticRegr.fit(self.X_train, self.y_train)
         score = self.logisticRegr.score(self.X_test, self.y_test)
