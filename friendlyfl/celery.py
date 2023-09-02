@@ -105,16 +105,17 @@ def process_task(args, run, is_retry):
     tasks = run['tasks']
     model = tasks[cur_seq - 1]['model']
     status = format_status(run['status'])
+    model_id = "{}_{}".format(run_id, cur_seq)
 
     try:
         klass = load_class('friendlyfl.controller.tasks.{}'.format(
             camel_to_snake(model)), model)
-        if run_id in ml_models:
-            instance = ml_models[run_id]
+        if model_id in ml_models:
+            instance = ml_models[model_id]
         else:
             instance = klass(run)
-            ml_models[run_id] = instance
-        refresh_model(run_id)
+            ml_models[model_id] = instance
+        refresh_model(model_id)
         instance.method_call(status, run, is_retry)
 
     except (ImportError, AttributeError) as e:

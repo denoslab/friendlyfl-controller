@@ -301,7 +301,8 @@ class AbstractTask(ABC):
             if any(files_data.values()):
 
                 response = requests.post('{0}/runs-action/upload/'.format(router_url, self.run_id),
-                                         auth=(router_username, router_password),
+                                         auth=(router_username,
+                                               router_password),
                                          data=data,
                                          files=files_data)
                 if response.status_code == 200:
