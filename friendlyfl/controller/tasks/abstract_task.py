@@ -89,10 +89,10 @@ class AbstractTask(ABC):
             if self.role == 'coordinator':
                 self.status = s
                 if self.runs_in_fails():
-                    self.notify(1)
+                    self.notify(1, param={'update_all': True})
                     return
                 if self.runs_in_same_state('preparing'):
-                    self.notify(4)
+                    self.notify(4, param={'update_all': True})
             else:
                 if self.status == s:
                     self.logger.warning(
@@ -102,6 +102,7 @@ class AbstractTask(ABC):
                     self.status = s
         except Exception as e:
             self.logger.warning("Exception in preparing status: {}".format(e))
+            self.notify(1, param={'update_all': True})
 
     def running(self, *args, **kwargs):
         """
@@ -126,6 +127,7 @@ class AbstractTask(ABC):
                 self.notify(1)
         except Exception as e:
             self.logger.warning("Exception in running status: {}".format(e))
+            self.notify(1)
 
     def pending_success(self, *args, **kwargs):
         """
@@ -154,9 +156,9 @@ class AbstractTask(ABC):
             if self.role == 'coordinator':
                 self.status = s
                 if self.runs_in_fails():
-                    self.notify(0)
+                    self.notify(0, param={'update_all': True})
                 if self.runs_in_same_state('pending_aggregating') and self.download_artifacts():
-                    self.notify(7)
+                    self.notify(7, param={'update_all': True})
             else:
                 if self.status == s:
                     self.logger.warning(
@@ -167,6 +169,7 @@ class AbstractTask(ABC):
         except Exception as e:
             self.logger.warning(
                 "Exception in pending aggregating status: {}".format(e))
+            self.notify(0, param={'update_all': True})
 
     def aggregating(self, *args, **kwargs):
         """
@@ -181,17 +184,18 @@ class AbstractTask(ABC):
             if self.role == 'coordinator':
                 self.status = s
                 if self.runs_in_fails():
-                    self.notify(0)
+                    self.notify(0, param={'update_all': True})
                 if self.do_aggregate():
                     is_last_round = self.is_last_round()
                     self.logger.debug(
                         "Is the last round? {}".format(is_last_round))
                     if is_last_round:
-                        self.notify(8)
+                        self.notify(8, param={'update_all': True})
                     else:
-                        self.notify(2, param={'increase_round': True})
+                        self.notify(
+                            2, param={'increase_round': True, 'update_all': True})
                 else:
-                    self.notify(0)
+                    self.notify(0, param={'update_all': True})
             else:
                 if self.status == s:
                     self.logger.warning(
@@ -202,6 +206,7 @@ class AbstractTask(ABC):
         except Exception as e:
             self.logger.warning(
                 "Exception in aggregating status: {}".format(e))
+            self.notify(0, param={'update_all': True})
 
     def pending_failed(self, *args, **kwargs):
         """
