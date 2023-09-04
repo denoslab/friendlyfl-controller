@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED 1
 
 RUN apt-get update \
     && apt-get install -y gcc python3-dev musl-dev libmagic1 libffi-dev netcat-traditional \
-    build-essential libpq-dev
+    build-essential libpq-dev vim dos2unix bash
 
 COPY poetry.lock pyproject.toml /app/
 
@@ -18,5 +18,7 @@ RUN poetry install
 COPY . /app/
 
 RUN chmod +x ./entrypoint.sh
+
+RUN dos2unix ./entrypoint.sh
 
 ENTRYPOINT [ "./entrypoint.sh" ]
