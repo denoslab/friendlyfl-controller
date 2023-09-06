@@ -63,14 +63,14 @@
     </div>
     <script>
         $(document).ready(function () {
-            $("#downloadButton").click(function () {
+            $("[id^='downloadButton-']").click(function () {
                 var url = $(this).data("message");
                 $.ajax({
                     url: url,
                     success: function (data) {
                         if (data.success) {
                             if (null != data.content) {
-                                initiateDownload(data.content, "artifacts")
+                                initiateDownload(data.content, data.file_type)
                             }
                             location.reload();
                         } else {
@@ -124,7 +124,6 @@
             });
 
             function fetchLogsAndUpdateModal() {
-                console.log("1111111")
                 if (isModalVisible) {
                     var modal = $('#logModal');
                     var runId = $('#logs').data('run');
@@ -193,7 +192,7 @@
                 {% if run.status|get_actions %}
                     <p>Actions:</p>
                     {% for action in run.status|get_actions %}
-                        <a id="downloadButton"
+                        <a id="downloadButton-{{ run.id }}-{{ action }}"
                            data-message="/controller/runs/action/{{ run.id }}/{{ run.project }}/{{ run.batch }}/{{ run.role }}/{{ action }}"
                            class="btn btn-primary">{{ action|upper_first_char }}</a>
                     {% endfor %}
