@@ -8,7 +8,8 @@ update_at = 'updated_at'
 create_at = 'created_at'
 status_dic = {"FAILED": 0, "PENDING FAILED": 1, "STANDBY": 2, "PREPARING": 3, "RUNNING": 4, "PENDING SUCCESS": 5,
               "SUCCESS": 6}
-download = 'download'
+download_actions = ['download artifacts',
+                    'download logs', 'download mid_artifacts']
 restart = 'restart'
 stop = 'stop'
 
@@ -67,8 +68,8 @@ def get_actions(status: str):
         return actions
     code = status_dic[status]
     if code == 6:
-        actions.append(download)
         actions.append(restart)
+        actions.extend(download_actions)
         return actions
     if code == 5:
         return actions

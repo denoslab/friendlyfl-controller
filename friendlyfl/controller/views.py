@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from .file.file_utils import gen_logs_url
 from .forms import SiteForm, ProjectJoinForm, ProjectNewForm, ProjectLeaveForm
 from .tasks_validator import TaskValidator
+from .templatetags.fl_tag import download_actions
 
 # take environment variables from .env.
 load_dotenv()
@@ -317,11 +318,16 @@ def start_runs(request, project_id, site_id):
 
 def perform_run_action(request, run_id, project_id, batch, role, action):
     if run_id and project_id and batch and role and action:
-        if action == 'download':
-            response = requests.get('{0}/runs-action/download/?run={1}'.format(router_url, run_id),
-                                    headers={
-                                        'Content-Type': 'application/json'},
-                                    auth=(router_username, router_password))
+        file_type = None
+        if action in download_actions:
+            file_type = action.split()[1]
+            logger.debug('will download {} files'.format(file_type))
+            response = requests.get(
+                '{0}/runs-action/download/?run={1}&all_runs={2}&type={3}'.format(router_url,
+                                                                                 run_id,
+                                                                                 1,
+                                                                                 file_type),
+                auth=(router_username, router_password))
         else:
             data = dict()
             data['run'] = run_id
@@ -340,9 +346,10 @@ def perform_run_action(request, run_id, project_id, batch, role, action):
                  'msg': 'Failed to perform {} action on run with id : {} due to {}'.format(action, run_id,
                                                                                            response.text)})
         else:
-            if action == 'download':
-                return JsonResponse({'success': True, 'msg': 'Successfully get run artifacts',
-                                     'content': base64.b64encode(response.content).decode('utf-8')})
+            if action in download_actions:
+                return JsonResponse(
+                    {'success': True, 'msg': 'Successfully get run artifacts or logs', 'file_type': file_type,
+                     'content': base64.b64encode(response.content).decode('utf-8')})
             return JsonResponse({'success': True, 'msg': 'Successfully update run status'})
     else:
         return JsonResponse(
