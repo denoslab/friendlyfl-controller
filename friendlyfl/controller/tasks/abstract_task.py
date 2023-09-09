@@ -42,7 +42,7 @@ class AbstractTask(ABC):
         self.batch_id = run['batch']
         self.role = run['role']
         self.status = run['status']
-        self.logger = self.post_init(run)
+        self.post_init(run)
 
     def method_call(self, name: str, *args, **kwargs):
         if hasattr(self, name) and callable(getattr(self, name)):
@@ -60,7 +60,7 @@ class AbstractTask(ABC):
         """
         try:
             run = args[0]
-            self.logger = self.post_init(run)
+            self.post_init(run)
             s = inspect.currentframe().f_code.co_name
             if self.status == s:
                 self.logger.warning(
@@ -410,11 +410,19 @@ class AbstractTask(ABC):
         self.cur_seq = run['cur_seq']
         self.tasks = run['tasks']
         cur_round = self.get_round()
+
+        logger_name = 'logger-{}-{}-{}'.format(
+            self.run_id, self.cur_seq, cur_round)
+
+        if self.logger and self.logger.name == logger_name:
+            self.logger.debug(
+                'logger with name {} exists, will not init again'.format(logger_name))
+            return
+
         url = gen_logs_url(self.run_id, self.cur_seq, cur_round)
         create_if_not_exist(url)
 
-        logger = logging.getLogger(
-            'logger-{}-{}-{}'.format(self.run_id, self.cur_seq, cur_round))
+        logger = logging.getLogger(logger_name)
         logger.setLevel(logging.DEBUG)  # Set the logging level as needed
 
         # Create a log formatter
@@ -439,4 +447,4 @@ class AbstractTask(ABC):
 
         logger.debug(
             "Init logger for run {} - seq {} - round {} ".format(self.run_id, self.cur_seq, cur_round))
-        return logger
+        self.logger = logger
