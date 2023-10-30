@@ -36,6 +36,35 @@
 {% block content %}
     <body>
     <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        async function uploadFile(run_id) {
+            const csrftoken = getCookie('csrftoken');
+            console.log(csrftoken)
+            let formData = new FormData();
+            formData.append("run_id", run_id)
+            formData.append("has_dataset", "true")
+            formData.append("dataset", fileupload.files[0]);
+            await fetch(new Request('/controller/runs/dataset/', {headers: {'X-CSRFToken': csrftoken}}), {
+                method: "POST",
+                body: formData
+            });
+        }
+
         $(document).ready(function () {
             $("#startButton").click(function () {
                 $.ajax({
@@ -59,6 +88,7 @@
     {% load last_status_value from fl_tag %}
     {% load last_run_duration from fl_tag %}
     {% load site_duration from fl_tag %}
+    {% load get_cur_round from fl_tag %}
     <div class="two-columns-container">
         <div class="left-column">
             <p>Project Name: {{ project_details.name }}</p>
@@ -77,11 +107,11 @@
 
         <div class="right-column">
             <!-- Content for the right side -->
-            <form>
-                {% if can_start_runs %}
+            {% if can_start_runs %}
+                <form>
                     <button id="startButton" class="btn btn-success" type="submit">New Run</button>
-                {% endif %}
-            </form>
+                </form>
+            {% endif %}
             <p>Current Project Batch: {{ runs | length }}</p>
             <h2>Participants</h2>
             <table>
@@ -125,7 +155,17 @@
                         <td>{{ run.updated_at }}</td>
                         <td>{{ run.status }}</td>
                         <td>{{ run.batch }}</td>
-                        <td><a href="/controller/runs/detail/{{ run.batch }}/{{ project_id }}/{{ site_id }}">Details</a>
+                        <td>
+                            {% if run.status == 'Standby' and run.cur_seq == 1 and run|get_cur_round == 1 %}
+                                <form>
+                                    <input id="fileupload" type="file" name="fileupload"/>
+                                    <button id="uploadDataset" class="btn btn-success"
+                                            onclick="uploadFile({{ run.id }})">Upload
+                                        Dataset
+                                    </button>
+                                </form>
+                            {% endif %}
+                            <a href="/controller/runs/detail/{{ run.batch }}/{{ project_id }}/{{ site_id }}">Details</a>
                         </td>
                     </tr>
                 {% endfor %}

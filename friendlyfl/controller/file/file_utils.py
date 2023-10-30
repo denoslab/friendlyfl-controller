@@ -15,6 +15,8 @@ mid_artifacts_dir = 'all-mid-artifacts'
 
 artifacts_name = 'artifacts.txt'
 
+dataset_name = 'dataset'
+
 
 def create_if_not_exist(url):
     if url:
@@ -32,6 +34,12 @@ def gen_url(run_id, task_seq, round_seq, file_name):
     if not run_id or not task_seq or not round_seq:
         return None
     return f"{base_folder}/{run_id}/{task_seq}/{round_seq}/{file_name}"
+
+
+def gen_dataset_url(run_id):
+    if not run_id:
+        return None
+    return f"{base_folder}/{run_id}/"
 
 
 def gen_logs_url(run_id, task_seq, round_seq):

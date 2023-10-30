@@ -4,6 +4,7 @@ import logging
 import os
 
 import requests
+from django.core.files.storage import FileSystemStorage
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.http import JsonResponse
@@ -11,7 +12,7 @@ from django.shortcuts import redirect
 from django.template import loader
 from dotenv import load_dotenv
 
-from .file.file_utils import gen_logs_url
+from .file.file_utils import gen_logs_url, gen_dataset_url
 from .forms import SiteForm, ProjectJoinForm, ProjectNewForm, ProjectLeaveForm
 from .tasks_validator import TaskValidator
 from .templatetags.fl_tag import download_actions
@@ -295,6 +296,38 @@ def run_detail(request, batch, project_id, site_id):
         "participant": dic['participant'] if dic else -1
     }
     return HttpResponse(template.render(context, request))
+
+
+def upload_dataset(request):
+    run_id = request.POST.get('run_id', None)
+    has_dataset = request.POST.get('has_dataset', None)
+    dataset = request.FILES.get('dataset')
+    if not run_id:
+        return JsonResponse({
+            'success': False, 'msg': 'Run info is not provided to perform action'
+        })
+    if has_dataset and not dataset:
+        return JsonResponse({
+            'success': False, 'msg': 'Dataset is not provided to perform action'
+        })
+    if dataset:
+        url = gen_dataset_url(run_id)
+        fs = FileSystemStorage(url)
+        name = fs.save('dataset', dataset)
+        if not name:
+            return JsonResponse({
+                'success': False, 'msg': 'Dataset saves error'
+            })
+    param = dict()
+    param['status'] = 3
+    requests.put('{0}/runs/{1}/status/'.format(router_url, run_id),
+                 headers={'Content-type': 'application/json'},
+                 auth=(router_username, router_password),
+                 data=json.dumps(param))
+
+    return JsonResponse({
+        'success': True, 'msg': 'Dataset save successfully'
+    })
 
 
 def start_runs(request, project_id, site_id):

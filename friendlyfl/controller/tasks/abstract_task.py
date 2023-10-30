@@ -68,11 +68,12 @@ class AbstractTask(ABC):
                 return
             else:
                 self.status = s
-            valid = self.validate()
-            if valid:
-                self.notify(3)
-            else:
-                self.notify(1)
+            if not self.is_first_round():
+                valid = self.validate()
+                if valid:
+                    self.notify(3)
+                else:
+                    self.notify(1)
         except Exception as e:
             self.logger.warning("Exception in standby status: {}".format(e))
             self.notify(1)
@@ -361,6 +362,19 @@ class AbstractTask(ABC):
                 self.logger.debug("Total Round: {}, Current Round: {}".format(
                     total_round, current_round))
                 return current_round >= total_round
+            else:
+                return True
+        else:
+            return False
+
+    def is_first_round(self) -> bool:
+        self.logger.debug(
+            "Checking whether it is the first round. cur_seq: {}, tasks: {}".format(self.cur_seq, len(self.tasks)))
+        if self.cur_seq == 1:
+            c = self.tasks[self.cur_seq - 1]['config']
+            if 'current_round' in c:
+                current_round = c['current_round']
+                return current_round == 1
             else:
                 return True
         else:
