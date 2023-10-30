@@ -5,6 +5,11 @@ services:
     build:
       context: .
     image: friendlyfl-controller
+    depends_on:
+      - controller-scheduler
+      - controller-run-worker
+      - controller-processor-worker
+      - redis
     ports:
       - '8001:8000'
     env_file:

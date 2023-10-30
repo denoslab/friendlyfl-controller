@@ -11,6 +11,7 @@ urlpatterns = [
     path("runs/<int:run_id>/", views.run_detail),
     path("runs/detail/<int:batch>/<int:project_id>/<int:site_id>/", views.run_detail),
     path("runs/start/<int:project_id>/<int:site_id>/", views.start_runs),
+    path("runs/dataset/", views.upload_dataset),
     path("runs/action/<int:run_id>/<int:project_id>/<int:batch>/<str:role>/<str:action>/",
          views.perform_run_action),
     path("runs/fetch_logs/",

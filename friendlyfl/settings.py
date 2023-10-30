@@ -97,7 +97,9 @@ REDIS_PORT = os.getenv('REDIS_PORT', default=6379)
 REDIS_DB = os.getenv('REDIS_DB', default=0)
 
 CELERY_TASK_ROUTES = {
+    'heartbeat': {'queue': 'friendlyfl.run'},
     'fetch_run': {'queue': 'friendlyfl.run'},
+    'monitor_run': {'queue': 'friendlyfl.run'},
     'process_task': {'queue': 'friendlyfl.processor'}
 }
 
