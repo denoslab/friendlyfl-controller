@@ -22,16 +22,16 @@ class LogisticRegression(AbstractTask):
         self.logger.warning('Loading breast_cancer dataset...')
         X, y = load_breast_cancer(return_X_y=True)
         # Split the data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        X_train, X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         # Standardize the numerical features
         scaler = StandardScaler()
         self.X_train_scaled = scaler.fit_transform(X_train)
         self.X_test_scaled = scaler.transform(X_test)
         self.logger.warning(f'Training data shape: {self.X_train_scaled.shape}')
-        self.logger.warning(f'Training label shape: {y_train.shape}')
+        self.logger.warning(f'Training label shape: {self.y_train.shape}')
         self.logger.warning(f'Test data shape: {self.X_test_scaled.shape}')
-        self.logger.warning(f'Test label shape: {y_test.shape}')
+        self.logger.warning(f'Test label shape: {self.y_test.shape}')
 
         # Initialize Logistic regression model
         self.logisticRegr = sklearn.linear_model.LogisticRegression(
