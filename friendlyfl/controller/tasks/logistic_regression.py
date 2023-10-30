@@ -1,30 +1,11 @@
-from typing import Tuple, Union, List
-
-import numpy as np
-import openml
-import sklearn.linear_model
-
 from friendlyfl.controller.tasks.abstract_task import AbstractTask
-
-XY = Tuple[np.ndarray, np.ndarray]
-Dataset = Tuple[XY, XY]
-LogRegParams = Union[XY, Tuple[np.ndarray]]
-XYList = List[XY]
-
-
-def load_mnist() -> Dataset:
-    """
-    Loads the MNIST dataset using OpenML.
-    OpenML dataset link: https://www.openml.org/d/554
-    """
-    mnist_openml = openml.datasets.get_dataset(554)
-    Xy, _, _, _ = mnist_openml.get_data(dataset_format="array")
-    X = Xy[:, :-1]  # the last column contains labels
-    y = Xy[:, -1]
-    # First 60000 samples consist of the train set
-    x_train, y_train = X[:60000], y[:60000]
-    x_test, y_test = X[60000:], y[60000:]
-    return (x_train, y_train), (x_test, y_test)
+import sklearn.linear_model
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_auc_score
+import warnings
+warnings.filterwarnings('ignore')
 
 
 class LogisticRegression(AbstractTask):
@@ -32,15 +13,27 @@ class LogisticRegression(AbstractTask):
     def __init__(self, run):
         super().__init__(run)
         self.logisticRegr = None
-        self.X_train = None
+        self.X_train_scaled = None
         self.y_train = None
-        self.X_test = None
+        self.X_test_scaled = None
         self.y_test = None
+
         # load dataset
-        self.logger.warning('Loading MNIST dataset...')
-        (self.X_train, self.y_train), (self.X_test, self.y_test) = load_mnist()
-        self.logger.warning(f'Training data shape: {self.X_train.shape}')
-        self.logger.warning(f'Training label shape: {self.y_train.shape}')
+        self.logger.warning('Loading breast_cancer dataset...')
+        X, y = load_breast_cancer(return_X_y=True)
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Standardize the numerical features
+        scaler = StandardScaler()
+        self.X_train_scaled = scaler.fit_transform(X_train)
+        self.X_test_scaled = scaler.transform(X_test)
+        self.logger.warning(f'Training data shape: {self.X_train_scaled.shape}')
+        self.logger.warning(f'Training label shape: {y_train.shape}')
+        self.logger.warning(f'Test data shape: {self.X_test_scaled.shape}')
+        self.logger.warning(f'Test label shape: {y_test.shape}')
+
+        # Initialize Logistic regression model
         self.logisticRegr = sklearn.linear_model.LogisticRegression(
             penalty="l2",
             max_iter=1,  # local epoch
@@ -66,9 +59,40 @@ class LogisticRegression(AbstractTask):
         """
 
         self.logger.warning('Starting training...')
-        self.logisticRegr.fit(self.X_train, self.y_train)
-        score = self.logisticRegr.score(self.X_test, self.y_test)
+        self.logisticRegr.fit(self.X_train_scaled, self.y_train)
+        score = self.logisticRegr.score(self.X_test_scaled, self.y_test)
         self.logger.warning(f'Training complete. Model score: {score}')
+        y_predict = self.logisticRegr.predict(self.X_test_scaled)
+
+        # Accuracy metric
+        accuracy = accuracy_score(self.y_test, y_predict)
+        self.logger.warning(f'Accuracy: {accuracy}')
+        report = classification_report(self.y_test, y_predict)
+        self.logger.warning(f'Classification report : \n  {report}')
+
+        # Documentation: https://scikit-learn.org/stable/modules/model_evaluation.html
+        # ROC-AUC
+        auc = roc_auc_score(self.y_test, y_predict)
+        self.logger.warning(f'AUC: {auc}')
+
+        # Use confusion matrix to calculate the metrics
+        tn, fp, fn, tp = confusion_matrix(self.y_test, y_predict).ravel()
+
+        accuracy = (tp + tn) / (tn + fp + fn + tp)
+        self.logger.warning(f'Accuracy: {accuracy}')
+
+        sensitivity = tp / (tp + fn)
+        self.logger.warning(f'Sensitivity: {sensitivity}')
+
+        specificity = tn / (tn + fp)
+        self.logger.warning(f'Specificity: {specificity}')
+
+        npv = tn / (tn + fn)
+        self.logger.warning(f'NPV: {npv}')
+
+        ppv = tp / (tp + fp)
+        self.logger.warning(f'PPV: {ppv}')
+
         return True
 
     def do_aggregate(self) -> bool:
