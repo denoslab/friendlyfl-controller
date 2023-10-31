@@ -93,7 +93,32 @@ class LogisticRegression(AbstractTask):
         ppv = tp / (tp + fp)
         self.logger.warning(f'PPV: {ppv}')
 
+        to_upload = {
+            "coef_": self.logisticRegr.coef_,
+            "intercept_": self.logisticRegr.intercept_,
+            "metric_acc": accuracy,
+            "metric_auc": auc,
+            "metric_sensitivity": sensitivity,
+            "metric_specificity": specificity,
+            "mertic_npv": npv,
+            "metric_ppv": ppv
+        }
+        # TODO: upload the dict "to_upload" as a file
         return True
 
     def do_aggregate(self) -> bool:
+        # TODO: download the intermedia model files
+        # (this should be a list with intermediate model payloads from all clients)
+        downloaded = {
+            "coef_": self.logisticRegr.coef_,
+            "intercept_": self.logisticRegr.intercept_,
+            "metric_acc": accuracy,
+            "metric_auc": auc,
+            "metric_sensitivity": sensitivity,
+            "metric_specificity": specificity,
+            "mertic_npv": npv,
+            "metric_ppv": ppv
+        }
+        # aggregation logic for coordinator
+
         return True
