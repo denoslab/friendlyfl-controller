@@ -312,12 +312,18 @@ def upload_dataset(request):
         })
     if dataset:
         url = gen_dataset_url(run_id)
-        fs = FileSystemStorage(url)
-        name = fs.save('dataset', dataset)
-        if not name:
+        try:
+            fs = FileSystemStorage(url)
+            name = fs.save('dataset', dataset)
+            if not name:
+                return JsonResponse({
+                    'success': False, 'msg': 'Dataset saving error'
+                })
+        except:
             return JsonResponse({
-                'success': False, 'msg': 'Dataset saves error'
+                'success': False, 'msg': 'Dataset saving error'
             })
+
     param = dict()
     param['status'] = 3
     requests.put('{0}/runs/{1}/status/'.format(router_url, run_id),

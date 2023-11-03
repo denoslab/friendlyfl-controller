@@ -9,11 +9,11 @@ base_folder = '/friendlyfl-controller/local'
 
 logs_name = 'logs.txt'
 
-mid_artifacts_name = 'mid-artifacts.txt'
+mid_artifacts_name = 'mid-artifacts'
 
 mid_artifacts_dir = 'all-mid-artifacts'
 
-artifacts_name = 'artifacts.txt'
+artifacts_name = 'artifacts'
 
 dataset_name = 'dataset'
 
@@ -30,10 +30,13 @@ def create_if_not_exist(url):
                 "Error while creating log file: {} due to".format(e))
 
 
-def gen_url(run_id, task_seq, round_seq, file_name):
+def gen_url(run_id, task_seq, round_seq, file_name=None):
     if not run_id or not task_seq or not round_seq:
         return None
-    return f"{base_folder}/{run_id}/{task_seq}/{round_seq}/{file_name}"
+    if file_name:
+        return f"{base_folder}/{run_id}/{task_seq}/{round_seq}/{file_name}"
+    else:
+        return f"{base_folder}/{run_id}/{task_seq}/{round_seq}"
 
 
 def gen_dataset_url(run_id):
@@ -43,15 +46,15 @@ def gen_dataset_url(run_id):
 
 
 def gen_logs_url(run_id, task_seq, round_seq):
-    return gen_url(run_id, task_seq, round_seq, logs_name)
+    return gen_url(run_id, task_seq, round_seq, file_name=logs_name)
 
 
 def gen_artifacts_url(run_id, task_seq, round_seq):
-    return gen_url(run_id, task_seq, round_seq, artifacts_name)
+    return gen_url(run_id, task_seq, round_seq, file_name=artifacts_name)
 
 
 def gen_mid_artifacts_url(run_id, task_seq, round_seq):
-    return gen_url(run_id, task_seq, round_seq, mid_artifacts_name)
+    return gen_url(run_id, task_seq, round_seq, file_name=mid_artifacts_name)
 
 
 def gen_all_mid_artifacts_url(project_id, batch):
