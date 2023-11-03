@@ -416,9 +416,19 @@ class AbstractTask(ABC):
         return None
 
     def add_mid_artifacts(self, content):
-        # todo
-        # Note: user should define how to save mid-artifacts to local(save once or append along the training), and the method to get file path is provied already in file_utils.py
-        pass
+        if content:
+            url = gen_mid_artifacts_url(
+                self.run_id, self.cur_seq, self.get_round())
+            create_if_not_exist(url)
+            try:
+                with open(url, 'w') as f:
+                    f.write(content)
+                    f.close()
+                return True
+            except Exception as e:
+                self.logger.error(
+                    'Error while saving mid_artifacts. due to {}'.format(e))
+                return False
 
     def post_init(self, run):
         self.cur_seq = run['cur_seq']
