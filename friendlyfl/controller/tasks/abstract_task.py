@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 import requests
 from dotenv import load_dotenv
 
+from friendlyfl.controller.file import file_utils
 from friendlyfl.controller.file.file_utils import read_file_from_url, gen_logs_url, save_all_mid_artifacts, \
     gen_mid_artifacts_url, create_if_not_exist
 # take environment variables from .env.
@@ -89,12 +90,15 @@ class AbstractTask(ABC):
             s = inspect.currentframe().f_code.co_name
             if self.role == 'coordinator':
                 self.status = s
-                if self.runs_in_fails():
+                if self.runs_in_fails() or not self.prepare_data():
                     self.notify(1, param={'update_all': True})
                     return
                 if self.runs_in_same_state('preparing'):
                     self.notify(4, param={'update_all': True})
             else:
+                if not self.prepare_data():
+                    self.notify(1, param={'update_all': False})
+                    return
                 if self.status == s:
                     self.logger.warning(
                         "Already in status {}. Ignore message".format(s))
@@ -225,6 +229,10 @@ class AbstractTask(ABC):
 
     @abstractmethod
     def validate(self) -> bool:
+        return True
+
+    @abstractmethod
+    def prepare_data(self) -> bool:
         return True
 
     @abstractmethod
@@ -472,3 +480,6 @@ class AbstractTask(ABC):
         logger.debug(
             "Init logger for run {} - seq {} - round {} ".format(self.run_id, self.cur_seq, cur_round))
         self.logger = logger
+
+    def read_dataset(self, run_id):
+        return file_utils.load_dataset_by_run(run_id)

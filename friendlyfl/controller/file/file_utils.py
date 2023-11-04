@@ -3,6 +3,8 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+import pandas as pd
+
 logger = logging.getLogger(__name__)
 
 base_folder = '/friendlyfl-controller/local'
@@ -83,6 +85,19 @@ def read_file_from_url(url):
             file_obj = open(url, 'r')
             return file_obj
         except FileNotFoundError:
-            print(f"File not found at {url}")
+            logger.warning("File not found at {}".format(url))
             return None
     return None
+
+
+def load_dataset_by_run(run_id):
+    combined_csv_file = read_file_from_url(gen_dataset_url(run_id) + 'dataset')
+    if combined_csv_file:
+        try:
+            combined_data = pd.read_csv(combined_csv_file, header=None)
+            X = combined_data.iloc[:, :-1].values
+            y = combined_data.iloc[:, -1].values
+            return X, y
+        except Exception as e:
+            logger.warning("Failed to read data set due to {}".format(e))
+    return None, None
