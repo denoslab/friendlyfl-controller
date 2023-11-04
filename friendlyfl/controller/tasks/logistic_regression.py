@@ -1,13 +1,16 @@
 import json
+from pathlib import Path
 
-from friendlyfl.controller.file.file_utils import gen_mid_artifacts_url
+import numpy
+
+from friendlyfl.controller.file.file_utils import gen_mid_artifacts_url, gen_all_mid_artifacts_url, gen_artifacts_url
 from friendlyfl.controller.tasks.abstract_task import AbstractTask
 import sklearn.linear_model
-from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_auc_score
 import warnings
+
 warnings.filterwarnings('ignore')
 
 
@@ -15,6 +18,7 @@ class LogisticRegression(AbstractTask):
 
     def __init__(self, run):
         super().__init__(run)
+        self.sample_size = None
         self.logisticRegr = None
         self.X_train_scaled = None
         self.y_train = None
@@ -26,6 +30,7 @@ class LogisticRegression(AbstractTask):
         self.logger.debug('Loading dataset for run {} ...'.format(self.run_id))
         X, y = self.read_dataset(self.run_id)
         if X is not None and len(X) > 0 and y is not None and len(y) > 0:
+            self.sample_size = len(y)
             # Split the data into training and testing sets
             X_train, X_test, self.y_train, self.y_test = train_test_split(
                 X, y, test_size=0.2, random_state=42)
@@ -68,7 +73,13 @@ class LogisticRegression(AbstractTask):
         all parameters not specified are set to their defaults
         default solver is incredibly slow thats why we change it
         """
+        to_upload = self.do_train()
+        url = gen_mid_artifacts_url(
+            self.run_id, self.cur_seq, self.get_round())
+        self.logger.info("Upload: {} \n to: {}".format(to_upload, url))
+        return self.save_artifacts(url, json.dumps(to_upload))
 
+    def do_train(self):
         self.logger.info('Starting training...')
         self.logisticRegr.fit(self.X_train_scaled, self.y_train)
         score = self.logisticRegr.score(self.X_test_scaled, self.y_test)
@@ -104,7 +115,8 @@ class LogisticRegression(AbstractTask):
         ppv = tp / (tp + fp)
         self.logger.info(f'PPV: {ppv}')
 
-        to_upload = {
+        return {
+            "sample_size": self.sample_size,
             "coef_": self.logisticRegr.coef_.tolist(),
             "intercept_": self.logisticRegr.intercept_.tolist(),
             "metric_acc": accuracy,
@@ -115,22 +127,46 @@ class LogisticRegression(AbstractTask):
             "metric_ppv": ppv
         }
 
-        self.logger.info(to_upload)
-        return self.add_mid_artifacts(json.dumps(to_upload))
-
     def do_aggregate(self) -> bool:
-        # TODO: download the intermedia model files
-        # (this should be a list with intermediate model payloads from all clients)
-        # downloaded = {
-        #     "coef_": self.logisticRegr.coef_,
-        #     "intercept_": self.logisticRegr.intercept_,
-        #     "metric_acc": accuracy,
-        #     "metric_auc": auc,
-        #     "metric_sensitivity": sensitivity,
-        #     "metric_specificity": specificity,
-        #     "mertic_npv": npv,
-        #     "metric_ppv": ppv
-        # }
-        # aggregation logic for coordinator
+        download_mid_artifacts = []
+        directory = gen_all_mid_artifacts_url(self.project_id, self.batch_id)
+        for path in Path(directory).rglob("*-{}-{}-mid-artifacts".format(self.cur_seq, self.get_round())):
+            with open(str(path), 'r') as f:
+                for line in f:
+                    download_mid_artifacts.append(json.loads(line))
 
-        return True
+        self.logger.debug(
+            "Download mid artifacts: {}".format(download_mid_artifacts))
+
+        self.sample_size = 0
+        coef = None
+        intercept = None
+        for mid_artifact_dict in download_mid_artifacts:
+            sample = mid_artifact_dict['sample_size']
+            self.sample_size = self.sample_size + sample
+            weighted_coef = numpy.multiply(numpy.asarray(
+                mid_artifact_dict['coef_']), sample)
+            weighted_intercept = numpy.multiply(numpy.asarray(
+                mid_artifact_dict['intercept_']), sample)
+            if coef is None:
+                coef = weighted_coef
+            else:
+                coef = numpy.append(coef, weighted_coef)
+            if intercept is None:
+                intercept = weighted_intercept
+            else:
+                intercept = numpy.append(intercept, weighted_intercept)
+
+        if coef is not None and intercept is not None:
+            self.logisticRegr.coef_ = numpy.divide(coef, self.sample_size)
+            self.logisticRegr.intercept_ = numpy.divide(
+                intercept, self.sample_size)
+            to_upload = self.do_train()
+            url = gen_artifacts_url(
+                self.run_id, self.cur_seq, self.get_round())
+            self.logger.info("Upload: {} \n to: {}".format(to_upload, url))
+            return self.save_artifacts(url, json.dumps(to_upload))
+        else:
+            self.logger.warning(
+                "Not able to calculate coef and intercept due to invalid mid artifact")
+            return False

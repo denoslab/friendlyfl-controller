@@ -2,6 +2,7 @@ import inspect
 import json
 import logging
 import os
+import traceback
 from abc import ABC, abstractmethod
 
 import requests
@@ -211,6 +212,7 @@ class AbstractTask(ABC):
         except Exception as e:
             self.logger.warning(
                 "Exception in aggregating status: {}".format(e))
+            self.logger.debug(traceback.print_exc())
             self.notify(0, param={'update_all': True})
 
     def pending_failed(self, *args, **kwargs):
@@ -274,7 +276,7 @@ class AbstractTask(ABC):
                     self.project_id, self.batch_id, content)
 
                 if saved_url:
-                    self.logger.warning(
+                    self.logger.debug(
                         'Successfully download and save all mid-artifacts to local for project {} at batch {} in {} dir'.format(
                             self.project_id, self.batch_id, saved_url))
                     return True
@@ -423,10 +425,8 @@ class AbstractTask(ABC):
                 return cur_task['config']['current_round']
         return None
 
-    def add_mid_artifacts(self, content):
+    def save_artifacts(self, url, content):
         if content:
-            url = gen_mid_artifacts_url(
-                self.run_id, self.cur_seq, self.get_round())
             create_if_not_exist(url)
             try:
                 with open(url, 'w') as f:
