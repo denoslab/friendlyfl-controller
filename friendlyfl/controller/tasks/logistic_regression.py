@@ -21,29 +21,35 @@ class LogisticRegression(AbstractTask):
         self.X_test_scaled = None
         self.y_test = None
 
+    def prepare_data(self) -> bool:
         # load dataset
-        self.logger.warning('Loading breast_cancer dataset...')
-        X, y = load_breast_cancer(return_X_y=True)
-        # Split the data into training and testing sets
-        X_train, X_test, self.y_train, self.y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42)
+        self.logger.debug('Loading dataset for run {} ...'.format(self.run_id))
+        X, y = self.read_dataset(self.run_id)
+        if X is not None and len(X) > 0 and y is not None and len(y) > 0:
+            # Split the data into training and testing sets
+            X_train, X_test, self.y_train, self.y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42)
 
-        # Standardize the numerical features
-        scaler = StandardScaler()
-        self.X_train_scaled = scaler.fit_transform(X_train)
-        self.X_test_scaled = scaler.transform(X_test)
-        self.logger.warning(
-            f'Training data shape: {self.X_train_scaled.shape}')
-        self.logger.warning(f'Training label shape: {self.y_train.shape}')
-        self.logger.warning(f'Test data shape: {self.X_test_scaled.shape}')
-        self.logger.warning(f'Test label shape: {self.y_test.shape}')
+            # Standardize the numerical features
+            scaler = StandardScaler()
+            self.X_train_scaled = scaler.fit_transform(X_train)
+            self.X_test_scaled = scaler.transform(X_test)
+            self.logger.debug(
+                f'Training data shape: {self.X_train_scaled.shape}')
+            self.logger.debug(f'Training label shape: {self.y_train.shape}')
+            self.logger.debug(f'Test data shape: {self.X_test_scaled.shape}')
+            self.logger.debug(f'Test label shape: {self.y_test.shape}')
 
-        # Initialize Logistic regression model
-        self.logisticRegr = sklearn.linear_model.LogisticRegression(
-            penalty="l2",
-            max_iter=1,  # local epoch
-            warm_start=True,  # prevent refreshing weights when fitting
-        )
+            # Initialize Logistic regression model
+            self.logisticRegr = sklearn.linear_model.LogisticRegression(
+                penalty="l2",
+                max_iter=1,  # local epoch
+                warm_start=True,  # prevent refreshing weights when fitting
+            )
+            return True
+        else:
+            self.logger.warning("Data set is not ready")
+        return False
 
     def validate(self) -> bool:
         """
