@@ -83,6 +83,18 @@
                 });
             });
         });
+
+        $(document).ready(function () {
+            $("[id^='openUploadModal']").click(function () {
+                const runId = $(this).data("run-id");
+                $("#uploadModal").modal("show");
+                $("#uploadDataset").off("click").on("click", async function () {
+                    await uploadFile(runId);
+                    $("#uploadModal").modal("hide");
+                });
+            });
+        });
+
     </script>
     <h1>Controller - Project Details</h1>
     {% load last_status_value from fl_tag %}
@@ -157,19 +169,33 @@
                         <td>{{ run.batch }}</td>
                         <td>
                             {% if run.status == 'Standby' and run.cur_seq == 1 and run|get_cur_round == 1 %}
-                                <form>
-                                    <input id="fileupload" type="file" name="fileupload"/>
-                                    <button id="uploadDataset" class="btn btn-success"
-                                            onclick="uploadFile({{ run.id }})">Upload
-                                        Dataset
-                                    </button>
-                                </form>
+                                <button id="openUploadModal" class="btn btn-success" data-toggle="modal"
+                                        data-target="#uploadModal" data-run-id="{{ run.id }}">
+                                    Upload Dataset
+                                </button>
                             {% endif %}
                             <a href="/controller/runs/detail/{{ run.batch }}/{{ project_id }}/{{ site_id }}">Details</a>
                         </td>
                     </tr>
                 {% endfor %}
             </table>
+            <div class="modal fade" id="uploadModal" tabindex="-1" role="dialog" aria-labelledby="uploadModalLabel"
+                 aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="uploadModalLabel">Upload Dataset</h5>
+                        </div>
+                        <div class="modal-body">
+                            <form>
+                                <input id="fileupload" type="file" name="fileupload"/>
+                                <button id="uploadDataset" class="btn btn-success">Upload Dataset
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <style>
                 table {
                     width: 80%;
