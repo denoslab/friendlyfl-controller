@@ -65,8 +65,28 @@ def gen_all_mid_artifacts_url(project_id, batch):
     return f"{base_folder}/{mid_artifacts_dir}/{project_id}/{batch}/"
 
 
-def save_all_mid_artifacts(project_id, batch, content):
+def downloaded_artifacts_url(run_id, task_seq, round_seq):
+    if not run_id or not task_seq or not round_seq:
+        return None
+    return f"{base_folder}/{artifacts_name}/{run_id}/{task_seq}/{round_seq}/"
+
+
+def download_all_mid_artifacts(project_id, batch, content):
     dir_url = gen_all_mid_artifacts_url(project_id, batch)
+    if dir_url:
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(content)
+        file_path = Path(dir_url)
+        file_path.mkdir(parents=True, exist_ok=True)
+
+        with zipfile.ZipFile(temp_file.name, 'r') as zip_ref:
+            zip_ref.extractall(file_path)
+        return file_path.absolute()
+    return None
+
+
+def download_artifacts(run_id, task_seq, round_seq, content):
+    dir_url = downloaded_artifacts_url(run_id, task_seq, round_seq)
     if dir_url:
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_file.write(content)
