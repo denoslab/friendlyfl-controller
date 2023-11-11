@@ -9,8 +9,8 @@ import requests
 from dotenv import load_dotenv
 
 from friendlyfl.controller.file import file_utils
-from friendlyfl.controller.file.file_utils import read_file_from_url, gen_logs_url, save_all_mid_artifacts, \
-    gen_mid_artifacts_url, create_if_not_exist
+from friendlyfl.controller.file.file_utils import read_file_from_url, gen_logs_url, download_all_mid_artifacts, \
+    gen_mid_artifacts_url, create_if_not_exist, gen_artifacts_url, download_artifacts
 # take environment variables from .env.
 from friendlyfl.controller.utils import format_status
 
@@ -133,6 +133,7 @@ class AbstractTask(ABC):
                 self.notify(1)
         except Exception as e:
             self.logger.warning("Exception in running status: {}".format(e))
+            self.logger.debug(traceback.format_exc())
             self.notify(1)
 
     def pending_success(self, *args, **kwargs):
@@ -143,7 +144,7 @@ class AbstractTask(ABC):
         In this event, output file and file will be uploaded to RS for forwarding to Coordinator.
         """
         try:
-            if self.upload():
+            if self.upload(False):
                 self.notify(6)
         except Exception as e:
             self.logger.warning(
@@ -163,7 +164,7 @@ class AbstractTask(ABC):
                 self.status = s
                 if self.runs_in_fails():
                     self.notify(0, param={'update_all': True})
-                if self.runs_in_same_state('pending_aggregating') and self.download_artifacts():
+                if self.runs_in_same_state('pending_aggregating') and self.download_mid_artifacts():
                     self.notify(7, param={'update_all': True})
             else:
                 if self.status == s:
@@ -223,7 +224,7 @@ class AbstractTask(ABC):
         In this event, file will be uploaded to RS for forwarding to Coordinator.
         """
         try:
-            if self.upload():
+            if self.upload(False):
                 self.notify(0)
         except Exception as e:
             self.logger.warning(
@@ -241,40 +242,34 @@ class AbstractTask(ABC):
     def training(self) -> bool:
         return True
 
-    def download_artifacts(self) -> bool:
+    def download_mid_artifacts(self) -> bool:
         """
         :return:
         """
         task_round = self.get_round()
         if task_round:
-            log = "Downloading artifacts"
-            self.logger.debug(log)
-
+            self.logger.debug("Downloading mid_artifacts")
             response = requests.get(
-                '{0}/runs-action/download/?run={1}&task_seq={2}&round_seq={3}&all_runs={4}&type={5}'.format(router_url,
-                                                                                                            self.run_id,
-                                                                                                            self.cur_seq,
-                                                                                                            task_round,
-                                                                                                            1,
-                                                                                                            'mid_artifacts'),
+                '{0}/runs-action/download/?run={1}&task_seq={2}&round_seq={3}&all_runs={4}&type=mid_artifacts'.format(
+                    router_url,
+                    self.run_id,
+                    self.cur_seq,
+                    task_round,
+                    1),
                 auth=(router_username, router_password))
 
             if response.status_code == 404:
                 self.logger.warning('No mid-artifacts found in router for project {} at batch {}'.format(
                     self.project_id, self.batch_id))
-                return True
+                return False
 
             if response.status_code == 200:
-
                 content = response.content
-
                 self.logger.debug(
-                    'Will  save all mid-artifacts to local for project {} at batch {}'.format(self.project_id,
-                                                                                              self.batch_id))
-
-                saved_url = save_all_mid_artifacts(
+                    'Saving all mid-artifacts to local for project {} at batch {}'.format(self.project_id,
+                                                                                          self.batch_id))
+                saved_url = download_all_mid_artifacts(
                     self.project_id, self.batch_id, content)
-
                 if saved_url:
                     self.logger.debug(
                         'Successfully download and save all mid-artifacts to local for project {} at batch {} in {} dir'.format(
@@ -284,6 +279,43 @@ class AbstractTask(ABC):
                     self.project_id, self.batch_id))
         return False
 
+    def download_artifact(self) -> bool:
+        """ Download artifact of the last run
+        :return:
+        """
+        seq_no, round_no = self.get_previous_seq_and_round()
+        if seq_no and round_no:
+            self.logger.debug("Downloading artifact")
+            response = requests.get(
+                '{0}/runs-action/download/?run={1}&task_seq={2}&round_seq={3}&all_runs={4}&type=artifacts'.format(
+                    router_url,
+                    self.run_id,
+                    seq_no,
+                    round_no,
+                    0),
+                auth=(router_username, router_password))
+
+            if response.status_code == 404:
+                self.logger.warning('No artifacts found in router for run {} at batch {}'.format(
+                    self.project_id, self.batch_id))
+                return False
+
+            if response.status_code == 200:
+                content = response.content
+                self.logger.debug(
+                    'Saving artifacts to local for run {} at seq {} and round {}'.format(self.run_id,
+                                                                                         seq_no, round_no))
+                saved_url = download_artifacts(
+                    self.run_id, seq_no, round_no, content)
+                if saved_url:
+                    self.logger.debug(
+                        'Successfully download and save artifacts to local for run {} at seq {} and round {} in {} dir'.format(
+                            self.run_id, seq_no, round_no, saved_url))
+                    return True
+                self.logger.warning('Failed to save mid-artifacts to local for run {} at seq {} and round {}'.format(
+                    self.run_id, seq_no, round_no))
+        return False
+
     @abstractmethod
     def do_aggregate(self) -> bool:
         """
@@ -291,25 +323,28 @@ class AbstractTask(ABC):
         """
         return True
 
-    def upload(self) -> bool:
+    def upload(self, is_artifact: bool) -> bool:
         # Here assume when round of task success, it should upload both mid-artifacts and logs to router
         task_round = self.get_round()
         if task_round:
-
             self.logger.debug('will upload logs and mid-artifacts')
-
             files_data = dict()
             data = dict()
+            if is_artifact:
+                artifact_url = gen_artifacts_url(
+                    self.run_id, self.cur_seq, task_round)
+                if artifact_url:
+                    files_data['artifacts'] = read_file_from_url(artifact_url)
+            else:
+                mid_artifacts_url = gen_mid_artifacts_url(
+                    self.run_id, self.cur_seq, task_round)
+                logs_url = gen_logs_url(self.run_id, self.cur_seq, task_round)
 
-            mid_artifacts_url = gen_mid_artifacts_url(
-                self.run_id, self.cur_seq, task_round)
-            logs_url = gen_logs_url(self.run_id, self.cur_seq, task_round)
-
-            if mid_artifacts_url:
-                files_data['mid_artifacts'] = read_file_from_url(
-                    mid_artifacts_url)
-            if logs_url:
-                files_data['logs'] = read_file_from_url(logs_url)
+                if mid_artifacts_url:
+                    files_data['mid_artifacts'] = read_file_from_url(
+                        mid_artifacts_url)
+                if logs_url:
+                    files_data['logs'] = read_file_from_url(logs_url)
 
             data['run'] = self.run_id
             data['task_seq'] = self.cur_seq
@@ -323,9 +358,9 @@ class AbstractTask(ABC):
                                          files=files_data)
                 if response.status_code == 200:
                     self.logger.debug(
-                        'Successfully upload logs and mid-artifacts of run {} - task {} - round {}'.format(self.run_id,
-                                                                                                           self.cur_seq,
-                                                                                                           task_round))
+                        'Successfully upload logs and artifacts of run {} - task {} - round {}'.format(self.run_id,
+                                                                                                       self.cur_seq,
+                                                                                                       task_round))
                     return True
             else:
                 self.logger.debug("Files data is empty. Ignore upload")
@@ -363,7 +398,7 @@ class AbstractTask(ABC):
         :return:
         """
         self.logger.debug(
-            "Checking whether it is the last round. cur_seq: {}, tasks: {}".format(self.cur_seq, len(self.tasks)))
+            "Checking whether it is the last round. cur_seq: {}, total tasks: {}".format(self.cur_seq, len(self.tasks)))
         if self.cur_seq >= len(self.tasks):
             c = self.tasks[self.cur_seq - 1]['config']
             if 'total_round' in c and 'current_round' in c:
@@ -379,7 +414,8 @@ class AbstractTask(ABC):
 
     def is_first_round(self) -> bool:
         self.logger.debug(
-            "Checking whether it is the first round. cur_seq: {}, tasks: {}".format(self.cur_seq, len(self.tasks)))
+            "Checking whether it is the first round. cur_seq: {}, total tasks: {}".format(self.cur_seq,
+                                                                                          len(self.tasks)))
         if self.cur_seq == 1:
             c = self.tasks[self.cur_seq - 1]['config']
             if 'current_round' in c:
@@ -389,6 +425,26 @@ class AbstractTask(ABC):
                 return True
         else:
             return False
+
+    def get_previous_seq_and_round(self):
+        """
+        Return the seq and round number of the previous round
+        :return: [seq_no, round_no]
+        """
+        c = self.tasks[self.cur_seq - 1]['config']
+        total_round = c['total_round']
+        current_round = c['current_round']
+
+        if self.cur_seq == 1:
+            if current_round > 1:
+                return self.cur_seq, current_round - 1
+            else:
+                return None, None
+        else:
+            if current_round == 1:
+                return self.cur_seq - 1, total_round
+            else:
+                return self.cur_seq, current_round - 1
 
     def runs_in_same_state(self, expected_state) -> bool:
         """

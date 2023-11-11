@@ -2,8 +2,10 @@ import json
 from pathlib import Path
 
 import numpy
+import numpy as np
 
-from friendlyfl.controller.file.file_utils import gen_mid_artifacts_url, gen_all_mid_artifacts_url, gen_artifacts_url
+from friendlyfl.controller.file.file_utils import gen_mid_artifacts_url, gen_all_mid_artifacts_url, gen_artifacts_url, \
+    downloaded_artifacts_url
 from friendlyfl.controller.tasks.abstract_task import AbstractTask
 import sklearn.linear_model
 from sklearn.model_selection import train_test_split
@@ -51,6 +53,18 @@ class LogisticRegression(AbstractTask):
                 max_iter=1,  # local epoch
                 warm_start=True,  # prevent refreshing weights when fitting
             )
+            if not self.is_first_round():
+                seq_no, round_no = self.get_previous_seq_and_round()
+                directory = downloaded_artifacts_url(
+                    self.run_id, seq_no, round_no)
+                for path in Path(directory).rglob("*-{}-{}-artifacts".format(seq_no, round_no)):
+                    with open(str(path), 'r') as f:
+                        for line in f:
+                            model = json.loads(line)
+                            self.logisticRegr.coef_ = np.asarray(
+                                model['coef_'])
+                            self.logisticRegr.intercept_ = np.asarray(
+                                model['intercept_'])
             return True
         else:
             self.logger.warning("Data set is not ready")
@@ -64,8 +78,7 @@ class LogisticRegression(AbstractTask):
         validate_log = "Run {} - task -{} - round {} task begins".format(
             self.run_id, self.cur_seq, task_round)
         self.logger.debug(validate_log)
-
-        return True
+        return self.download_artifact()
 
     def training(self) -> bool:
         """
@@ -73,17 +86,17 @@ class LogisticRegression(AbstractTask):
         all parameters not specified are set to their defaults
         default solver is incredibly slow thats why we change it
         """
-        to_upload = self.do_train()
+        self.logger.info('Starting training...')
+        self.logisticRegr.fit(self.X_train_scaled, self.y_train)
+        score = self.logisticRegr.score(self.X_test_scaled, self.y_test)
+        self.logger.info(f'Training complete. Model score: {score}')
+        to_upload = self.calculate_statistics()
         url = gen_mid_artifacts_url(
             self.run_id, self.cur_seq, self.get_round())
         self.logger.info("Upload: {} \n to: {}".format(to_upload, url))
         return self.save_artifacts(url, json.dumps(to_upload))
 
-    def do_train(self):
-        self.logger.info('Starting training...')
-        self.logisticRegr.fit(self.X_train_scaled, self.y_train)
-        score = self.logisticRegr.score(self.X_test_scaled, self.y_test)
-        self.logger.info(f'Training complete. Model score: {score}')
+    def calculate_statistics(self):
         y_predict = self.logisticRegr.predict(self.X_test_scaled)
 
         # Accuracy metric
@@ -161,11 +174,15 @@ class LogisticRegression(AbstractTask):
             self.logisticRegr.coef_ = numpy.divide(coef, self.sample_size)
             self.logisticRegr.intercept_ = numpy.divide(
                 intercept, self.sample_size)
-            to_upload = self.do_train()
+            to_upload = self.calculate_statistics()
             url = gen_artifacts_url(
                 self.run_id, self.cur_seq, self.get_round())
             self.logger.info("Upload: {} \n to: {}".format(to_upload, url))
-            return self.save_artifacts(url, json.dumps(to_upload))
+            if self.save_artifacts(url, json.dumps(to_upload)):
+                self.upload(True)
+                return True
+            else:
+                return False
         else:
             self.logger.warning(
                 "Not able to calculate coef and intercept due to invalid mid artifact")
