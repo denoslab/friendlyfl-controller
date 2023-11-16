@@ -260,7 +260,7 @@ def project_detail(request, project_id, site_id):
                 all_participants = participants_response.json()
                 can_start_runs = True
 
-    runs_response = requests.get('{0}/runs/lookup/?project={1}'.format(router_url, project_id),
+    runs_response = requests.get('{0}/runs/lookup/?project={1}&site_uid={2}'.format(router_url, project_id, site_uid),
                                  auth=(router_username, router_password))
     if runs_response.ok:
         all_runs = runs_response.json()
