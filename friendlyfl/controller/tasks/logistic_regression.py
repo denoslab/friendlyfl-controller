@@ -164,11 +164,11 @@ class LogisticRegression(AbstractTask):
             if coef is None:
                 coef = weighted_coef
             else:
-                coef = numpy.append(coef, weighted_coef)
+                coef = numpy.add(coef, weighted_coef)
             if intercept is None:
                 intercept = weighted_intercept
             else:
-                intercept = numpy.append(intercept, weighted_intercept)
+                intercept = numpy.add(intercept, weighted_intercept)
 
         if coef is not None and intercept is not None:
             self.logisticRegr.coef_ = numpy.divide(coef, self.sample_size)
