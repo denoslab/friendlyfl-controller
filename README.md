@@ -163,3 +163,7 @@ docker-compose up -d
 
 3. Testing the connection. Visit http://localhost:8001/friendlyfl/api/v1/ if the service port is configured as `8001`.
 
+## Acknowledgement
+
+Na Li, Meng Zhai, Lei Cai, and Leo Wei contributed to the design and implementation of this system.
+
